@@ -1,0 +1,46 @@
+# Python
+server/.venv/
+server/__pycache__/
+server/*.pyc
+server/*.pyo
+server/*.pyd
+server/.Python
+server/pip-log.txt
+server/.pytest_cache/
+**/__pycache__/
+**/*.pyc
+
+# uv
+**/.python-version
+# DO commit uv.lock!
+
+# Node
+web/node_modules/
+web/dist/
+web/.vite/
+
+# Generated assets
+web/public/assets/*.png
+web/public/assets/terrain_state.json
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+*.obj
+*.bin
+server/.env
