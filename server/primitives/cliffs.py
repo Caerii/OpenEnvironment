@@ -2,8 +2,7 @@
 import numpy as np
 from ..utils import clamp01
 from scipy.ndimage import gaussian_filter
-
-RES = 512
+from ..engine.config import RES
 
 def generate_cliff(cx: int, cy: int, length: int, height: float, orientation: float = 0.0,
                    steepness: float = 0.9) -> np.ndarray:

@@ -10,88 +10,59 @@ FastAPI backend for procedural terrain generation with natural language commands
 
 ```bash
 cd server
-
-# Install dependencies + create .venv + generate uv.lock
-uv sync
+uv sync  # Install dependencies + create .venv + generate uv.lock
 ```
 
 ### Run the server
 
-**Important:** Run from the **repo root** (not from inside `server/`) so Python can find the `server` module:
+**Easiest way:** Use the launcher script from repo root:
 
 ```bash
-# From repo root (semantic-terrain/)
+.\start-backend-uv.ps1
+```
+
+**Manual way:** Run from repo root (not from inside `server/`):
+
+```bash
 # Set PYTHONPATH so Python can find the 'server' module
 export PYTHONPATH="$(pwd)"  # macOS/Linux
 # OR
 $env:PYTHONPATH = (Get-Location).Path  # Windows PowerShell
 
-uv run --directory server uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload
+uv run --directory server uvicorn server.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
-Or use the provided launcher scripts (they handle PYTHONPATH automatically):
-
-```bash
-# Windows
-.\start-backend-uv.ps1
-
-# macOS/Linux
-chmod +x start-backend-uv.sh
-./start-backend-uv.sh
-```
-
-That's it! The server will be running at `http://localhost:8000`.
+Server runs at `http://localhost:8001`
 
 ### Adding/removing dependencies
 
 ```bash
-# Add a new package
-uv add python-dotenv
-
-# Remove a package
-uv remove python-dotenv
-
-# Re-sync after manual pyproject.toml edits
-uv sync
-
-# Update lock file
-uv lock
+uv add python-dotenv        # Add package
+uv remove python-dotenv     # Remove package
+uv sync                     # Re-sync after manual edits
+uv lock                     # Update lock file
 ```
 
 ### Development tools
 
 ```bash
-# Install dev dependencies (ruff, pytest)
-uv sync --all-extras
-
-# Run linter
-uv run ruff check .
-
-# Run tests (when added)
-uv run pytest
+uv sync --all-extras        # Install dev dependencies (ruff, pytest)
+uv run ruff check .         # Run linter
+uv run pytest               # Run tests (when added)
 ```
 
 ## Setup with `pip` (Alternative)
 
 ```bash
 cd server
-
-# Create virtual environment
 python -m venv .venv
 
-# Activate it
-# Windows PowerShell:
-.\.venv\Scripts\Activate.ps1
-# Windows CMD:
-.venv\Scripts\activate.bat
-# macOS/Linux:
-source .venv/bin/activate
+# Activate virtual environment
+.\.venv\Scripts\Activate.ps1  # Windows PowerShell
+source .venv/bin/activate     # macOS/Linux
 
-# Install dependencies
 pip install -r requirements.txt
-
-# Run the server
-uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn server.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
 ## API Endpoints
@@ -105,55 +76,49 @@ uvicorn server.main:app --host 0.0.0.0 --port 8000 --reload
 
 ```
 server/
-├── pyproject.toml      # uv/pip package definition
-├── requirements.txt    # pip compatibility (kept in sync)
+├── docs/              # Documentation hub
+├── engine/            # Terrain generation engine
+│   ├── builder.py    # TerrainBuilder (single-pass generation)
+│   ├── commands.py   # Command pattern (Add/Remove/Modify)
+│   ├── stamping.py   # Feature stamping & blending
+│   └── splatmap.py   # Texture map generation
+├── primitives/        # Feature generators
+│   ├── mountains.py  # Mountains, hills, mesas
+│   ├── valleys.py    # Valleys, canyons
+│   ├── dunes.py      # Desert dunes
+│   └── [16 more]     # Cliffs, slopes, ridges, etc.
+├── semantic/          # Natural language processing
+│   ├── parser.py     # LLM-powered semantic parser
+│   ├── scene/        # Scene graph (USD-inspired)
+│   ├── state_manager.py
+│   └── spatial_resolver.py
 ├── main.py            # FastAPI app + endpoints
-├── terrain.py         # Core generation logic
-├── utils.py           # Math helpers
-└── __init__.py        # Makes this a package
+├── terrain.py         # Main orchestrator
+└── pyproject.toml     # Dependencies
 ```
-
-## Important Notes
-
-### Running with uv
-
-Always run as a module to avoid import errors:
-
-```bash
-# ✅ Correct
-uv run uvicorn server.main:app --reload
-
-# ❌ Wrong (breaks relative imports)
-uv run uvicorn main:app --reload
-```
-
-### Python Version
-
-Requires Python 3.10+. If using multiple Python versions:
-
-```bash
-# Set specific version (optional)
-echo "3.11" > .python-version
-uv sync
-```
-
-### Output Directory
-
-Generated assets are written to `../web/public/assets/` (relative to this directory).
-
-Make sure the web frontend is in the expected location or update `OUT_DIR` in `main.py`.
 
 ## Troubleshooting
 
-**ImportError: attempted relative import with no known parent package**
-- Make sure you're running `uvicorn server.main:app` (with `server.` prefix)
-- Ensure `__init__.py` exists in the server directory
+**ImportError: attempted relative import**
+- Always run from repo root with `server.` prefix
+- Use the launcher scripts (they handle this automatically)
 
 **NumPy/SciPy compilation slow**
-- Upgrade to Python 3.10-3.12 for wheel support
-- Check CPU architecture (ARM/x86) matches available wheels
+- Use Python 3.10-3.12 for pre-built wheels
+- Check CPU architecture matches available wheels
 
 **CORS errors from frontend**
-- Backend is configured for `allow_origins=["*"]` (permissive)
-- Lock it down in production by editing `main.py`
+- Backend allows all origins by default (`allow_origins=["*"]`)
+- Lock down in production by editing `main.py`
 
+**Port already in use**
+- Change port in launcher scripts or manual command
+- Default: 8001
+
+## Documentation
+
+See [docs/](docs/) for:
+- Architecture principles
+- Development context
+- Testing guides
+- Refactoring recommendations

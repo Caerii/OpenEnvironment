@@ -3,13 +3,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict
-import os, json, time, traceback
+import os, json, time, traceback, logging
 from PIL import Image
 from .terrain import apply_actions, to_png_16bit_gray, to_png_8bit_gray, to_png_rgba
 from .primitives.base import base_flat
 from .engine.state_lock import atomic_read_state, atomic_write_state
 from .engine.cleanup import cleanup_old_assets, cleanup_temp_files
 from .engine.voxel import heightmap_to_voxels, export_voxels_mesh, export_voxels_binary
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 app.add_middleware(
@@ -35,7 +43,7 @@ def create_placeholder_texture(name: str, color: tuple):
         # Create solid color image (R, G, B)
         img = Image.new('RGB', (512, 512), color)
         img.save(path, 'JPEG', quality=85)
-        print(f"Created placeholder texture: {path}")
+        logger.info(f"Created placeholder texture: {path}")
 
 def ensure_placeholder_textures():
     """Ensure all required placeholder textures exist."""
@@ -84,7 +92,7 @@ def save_outputs(h, splat, tag, voxel_mode=False, voxel_resolution=256):
         
         # Generate voxel data if requested
         if voxel_mode:
-            print(f"Generating voxel grid with resolution: {voxel_resolution}³ ({voxel_resolution**3:,} voxels)")
+            logger.info(f"Generating voxel grid with resolution: {voxel_resolution}³ ({voxel_resolution**3:,} voxels)")
             voxel_grid = heightmap_to_voxels(h, resolution=voxel_resolution, height_scale=50.0)
             voxel_obj_path = os.path.join(OUT_DIR, f"voxel_{tag}.obj")
             voxel_bin_path = os.path.join(OUT_DIR, f"voxel_{tag}.bin")
@@ -98,7 +106,7 @@ def save_outputs(h, splat, tag, voxel_mode=False, voxel_resolution=256):
         return urls
     except Exception as e:
         error_msg = f"Failed to save outputs: {str(e)}"
-        print(f"ERROR in save_outputs: {error_msg}")
+        logger.error(f"ERROR in save_outputs: {error_msg}", exc_info=True)
         raise IOError(error_msg) from e
 
 @app.post("/api/generate")
@@ -135,8 +143,7 @@ def generate(cmd: Command):
         raise HTTPException(status_code=400, detail=f"Invalid request: {str(e)}")
     except Exception as e:
         error_msg = f"Generation failed: {str(e)}"
-        print(f"ERROR in /api/generate: {error_msg}")
-        print(traceback.format_exc())
+        logger.error(f"ERROR in /api/generate: {error_msg}", exc_info=True)
         raise HTTPException(status_code=500, detail=error_msg)
 
 @app.post("/api/modify")
@@ -151,7 +158,7 @@ def get_state():
         return atomic_read_state(STATE_PATH)
     except Exception as e:
         error_msg = f"Failed to read state: {str(e)}"
-        print(f"ERROR in /api/state: {error_msg}")
+        logger.error(f"ERROR in /api/state: {error_msg}", exc_info=True)
         raise HTTPException(status_code=500, detail=error_msg)
 
 @app.post("/api/reset")
@@ -159,6 +166,15 @@ def reset():
     """Reset terrain to perfectly flat base state."""
     try:
         state = {"features": [], "seed": 0}
+        
+        # Create fresh scene graph
+        try:
+            from server.semantic.scene import TerrainSceneGraph, SceneGraphSerializer
+            scene_graph = TerrainSceneGraph()
+            state["semantic_scene"] = SceneGraphSerializer.to_dict(scene_graph)
+        except Exception as e:
+            logger.warning(f"Failed to initialize scene graph: {e}")
+            state["semantic_scene"] = {}
         
         # Atomic write state
         atomic_write_state(state, STATE_PATH)
@@ -174,8 +190,7 @@ def reset():
     
     except Exception as e:
         error_msg = f"Reset failed: {str(e)}"
-        print(f"ERROR in /api/reset: {error_msg}")
-        print(traceback.format_exc())
+        logger.error(f"ERROR in /api/reset: {error_msg}", exc_info=True)
         raise HTTPException(status_code=500, detail=error_msg)
 
 @app.post("/api/regenerate")
@@ -196,8 +211,7 @@ def regenerate(cmd: Command = Command(text="", voxel=False, voxel_resolution=256
     
     except Exception as e:
         error_msg = f"Regeneration failed: {str(e)}"
-        print(f"ERROR in /api/regenerate: {error_msg}")
-        print(traceback.format_exc())
+        logger.error(f"ERROR in /api/regenerate: {error_msg}", exc_info=True)
         raise HTTPException(status_code=500, detail=error_msg)
 
 # Serve the /public/assets folder under /assets

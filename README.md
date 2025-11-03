@@ -13,18 +13,17 @@ A real-time web-based terrain generation system with natural language input. Gen
 
 ## Quick Start
 
-See **[SETUP.md](SETUP.md)** for detailed installation instructions.
+```bash
+# 1. Start backend
+.\start-backend-uv.ps1
 
-### TL;DR
+# 2. Start frontend (new terminal)
+.\start-frontend.ps1
 
-1. **Backend (with uv):** 
-   - Setup: `cd server && uv sync`
-   - Run: `uv run --directory server uvicorn server.main:app --reload` (from repo root)
-   - ⚠️ **Set PYTHONPATH first:** `export PYTHONPATH="$(pwd)"` (Unix) or `$env:PYTHONPATH = (Get-Location).Path` (PowerShell)
-   - Or use provided scripts: `.\start-backend-uv.ps1` (Windows) / `./start-backend-uv.sh` (Unix)
-   - ✅ **Placeholder textures are auto-generated on startup!**
-2. **Frontend:** `cd web && npm install && npm run dev`
-3. Open `http://localhost:5173` and start creating terrain!
+# 3. Open http://localhost:5173
+```
+
+See **[SETUP.md](SETUP.md)** for detailed instructions.
 
 ## Example Commands
 
@@ -34,6 +33,38 @@ add a valley in the center
 make the mountain taller
 add three hills on the right
 remove valley
+create a mountain pass between the mountains
+```
+
+## Documentation
+
+- **[SETUP.md](SETUP.md)** - Installation and getting started
+- **[server/docs/](server/docs/)** - All technical documentation
+
+## Architecture
+
+```
+┌──────────────────────────────────────┐
+│  Frontend (React + Three.js)         │
+│  - Natural language input            │
+│  - Real-time 3D visualization        │
+└────────────┬─────────────────────────┘
+             │ REST API
+             ▼
+┌──────────────────────────────────────┐
+│  Backend (FastAPI + Python)          │
+│  - LLM-powered semantic parser       │
+│  - Scene graph (USD-inspired)        │
+│  - Procedural generation engine      │
+└──────────────────────────────────────┘
+             │
+             ▼
+┌──────────────────────────────────────┐
+│  Outputs                             │
+│  - 16-bit heightmaps (Unity)         │
+│  - 8-bit heightmaps (Web)            │
+│  - RGBA splatmaps (texture blend)    │
+└──────────────────────────────────────┘
 ```
 
 ## Tech Stack
@@ -41,6 +72,7 @@ remove valley
 - **Backend:** FastAPI (Python) + NumPy + Perlin noise
 - **Frontend:** React + Vite + React Three Fiber + Three.js
 - **Shaders:** Custom GLSL for vertex displacement + splatmap blending
+- **AI:** Cerebras Llama for semantic parsing
 
 ## License
 

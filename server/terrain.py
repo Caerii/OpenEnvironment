@@ -1,7 +1,11 @@
 """Terrain generation orchestrator - Coordinates primitives, engine, and semantic layers."""
+import re
+import logging
 import numpy as np
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Optional
 from PIL import Image
+
+logger = logging.getLogger(__name__)
 
 # Import primitives
 from .primitives.base import base_desert, base_flat
@@ -18,10 +22,13 @@ from .engine.spatial import region_box, random_point_in, random_points_in
 from .engine.builder import TerrainBuilder
 from .engine.commands import create_command_from_dict, ActionCommand
 from .engine.variation import VariationEngine, VARIATION_CONFIG
+from .engine.feature_registry import FeatureRegistry
 from .semantic.spatial_resolver import resolve_position, resolve_multiple_positions
 
 # Import semantic
 from .semantic.state_manager import FeatureState
+from .semantic.scene import TerrainSceneGraph, SceneGraphSerializer, SceneGraphIntegrator
+from .semantic.parser import SemanticParser
 
 # Import utilities (export functions stay here for backward compatibility)
 from .utils import normalize01, clamp01
@@ -29,7 +36,7 @@ from .utils import normalize01, clamp01
 # Note: to_png functions are kept in terrain.py for backward compatibility
 # They can be moved to engine/output.py later if desired
 
-RES = 512
+from .engine.config import RES
 
 # Keep old regex parser for fallback
 def parse_command(cmd: str) -> Dict:
@@ -38,7 +45,6 @@ def parse_command(cmd: str) -> Dict:
     
     Improved to extract counts more granularly - associates numbers with specific feature types.
     """
-    import re
     cmd_lower = cmd.lower()
     res = {"actions": []}
     
@@ -52,7 +58,8 @@ def parse_command(cmd: str) -> Dict:
     
     # Find all feature types mentioned
     feature_types = []
-    for ftype in ["mountain", "hill", "valley", "dunes", "mesa", "plateau", "cliff", "canyon", "slope"]:
+    registered_types = FeatureRegistry.get_registered_types()
+    for ftype in registered_types:
         # Find all occurrences and their positions
         for match in re.finditer(rf"\b{re.escape(ftype)}\w*\b", cmd_lower):
             feature_types.append({
@@ -68,7 +75,7 @@ def parse_command(cmd: str) -> Dict:
     if not feature_types:
         # Default feature detection (old behavior)
         ftype = None
-        for key in ["mountain", "hill", "valley", "dunes", "mesa", "plateau", "cliff", "canyon", "slope"]:
+        for key in registered_types:
             if key in cmd_lower:
                 ftype = key
                 break
@@ -124,8 +131,6 @@ def parse_command(cmd: str) -> Dict:
 
 def _extract_count_before_position(text: str, position: int, number_words: dict) -> int:
     """Extract numerical count immediately before a given position."""
-    import re
-    
     # Look back up to 30 characters before position
     lookback_start = max(0, position - 30)
     lookback_text = text[lookback_start:position]
@@ -158,7 +163,6 @@ def _extract_count_before_position(text: str, position: int, number_words: dict)
 
 def _extract_position(text: str) -> str:
     """Extract position keyword from text."""
-    import re
     poskey = None
     for k in ["top-left", "top-right", "bottom-left", "bottom-right", "top", "bottom", "left", "right", "center", "middle"]:
         if k in text:
@@ -169,7 +173,6 @@ def _extract_position(text: str) -> str:
 
 def _extract_coords(text: str) -> tuple:
     """Extract coordinate tuple from text."""
-    import re
     m = re.search(r"\b(?:at\s*)?\(?(\d{1,3})\s*,\s*(\d{1,3})\)?", text)
     if m:
         x, y = int(m.group(1)), int(m.group(2))
@@ -181,7 +184,6 @@ def _extract_coords(text: str) -> tuple:
 
 def _extract_modifiers(text: str) -> dict:
     """Extract modifier information from text."""
-    import re
     taller = re.search(r"(taller|\+?(\d+)% taller|\+?(\d+)% height)", text)
     deeper = re.search(r"(deeper|\+?(\d+)% deeper)", text)
     wider = re.search(r"(wider|\+?(\d+)% wider|radius\s*(\d+))", text)
@@ -231,6 +233,18 @@ def apply_actions(cmd: str, state: Dict, base_biome_fn=None, direct_actions: Lis
     if base_biome_fn is None:
         base_biome_fn = base_desert
     
+    # Initialize/load scene graph
+    scene_graph = None
+    try:
+        if "semantic_scene" in state:
+            scene_graph = SceneGraphSerializer.from_dict(state["semantic_scene"])
+        else:
+            scene_graph = TerrainSceneGraph()
+            state["semantic_scene"] = SceneGraphSerializer.to_dict(scene_graph)
+    except Exception as e:
+        logger.warning(f"Scene graph initialization failed ({e}), continuing without scene graph")
+        scene_graph = None
+    
     # If direct_actions provided, use them directly (compositional calls)
     if direct_actions is not None:
         actions = direct_actions
@@ -240,12 +254,11 @@ def apply_actions(cmd: str, state: Dict, base_biome_fn=None, direct_actions: Lis
     else:
         # Parse command using MCP-enhanced semantic parser or fallback
         try:
-            from .semantic.parser import SemanticParser
             parser = SemanticParser()
             # Pass scene state for context-aware parsing (MCP feature)
             parsed = parser.parse(cmd, scene_state=state)
         except Exception as e:
-            print(f"Semantic parser unavailable ({e}), using regex fallback")
+            logger.warning(f"Semantic parser unavailable ({e}), using regex fallback")
             parsed = parse_command(cmd)
         
         actions = parsed.get("actions", [])
@@ -257,10 +270,58 @@ def apply_actions(cmd: str, state: Dict, base_biome_fn=None, direct_actions: Lis
     remove_modify_actions = [a for a in actions if a.get("kind") in ("remove", "modify")]
     add_actions = [a for a in actions if a.get("kind") == "add"]
     
+    # Track removed feature IDs for cleanup
+    removed_feature_ids = []
+    
     # Execute remove/modify actions (they modify feature_state)
+    # Use scene graph for reference resolution if available
+    if scene_graph:
+        for action_dict in remove_modify_actions:
+            # Try to resolve target_feature_ids if not provided
+            target_ids = SceneGraphIntegrator.resolve_target_features(scene_graph, action_dict)
+            if target_ids:
+                action_dict["target_feature_ids"] = target_ids
+            
+            # Track feature IDs that will be removed
+            if action_dict.get("kind") == "remove":
+                if target_ids:
+                    removed_feature_ids.extend(target_ids)
+                else:
+                    # If no target_ids, we'll track after removal
+                    feature_type = action_dict.get("type")
+                    if feature_type:
+                        # Get features before removal to track IDs
+                        existing_features = feature_state.list_features()
+                        matching_features = [f for f in existing_features if f.get("type") == feature_type]
+                        if matching_features:
+                            # Track IDs that will be removed (most recent by default)
+                            removed_feature_ids.append(matching_features[-1].get("id"))
+    
+    # Get feature IDs before removal (for tracking)
+    features_before_removal = feature_state.list_features()
+    feature_ids_before = {f.get("id") for f in features_before_removal if "id" in f}
+    
     for action_dict in remove_modify_actions:
         command = create_command_from_dict(action_dict)
         command.execute(None, feature_state, seed)  # Builder not needed for state-only operations
+    
+    # Get feature IDs after removal (to determine what was removed)
+    features_after_removal = feature_state.list_features()
+    feature_ids_after = {f.get("id") for f in features_after_removal if "id" in f}
+    
+    # Determine removed feature IDs
+    actually_removed_ids = feature_ids_before - feature_ids_after
+    if actually_removed_ids:
+        removed_feature_ids.extend(list(actually_removed_ids))
+    
+    # Clean up scene graph for removed features
+    if scene_graph and removed_feature_ids:
+        try:
+            SceneGraphIntegrator.cleanup_for_removed_features(
+                scene_graph, list(set(removed_feature_ids))
+            )
+        except Exception as e:
+            logger.warning(f"Scene graph cleanup failed: {e}")
     
     # Use TerrainBuilder for single-pass construction
     builder = TerrainBuilder(base_biome_fn, seed)
@@ -270,9 +331,44 @@ def apply_actions(cmd: str, state: Dict, base_biome_fn=None, direct_actions: Lis
         _apply_feature_to_builder(builder, feat, seed)
     
     # Execute add actions (they add features and apply them immediately)
+    # Track feature IDs created for scene graph entity creation
+    created_features_by_action = []
+    
     for action_dict in add_actions:
+        # Get feature count before adding
+        features_before = len(feature_state.list_features())
+        
         command = create_command_from_dict(action_dict)
         command.execute(builder, feature_state, seed)
+        
+        # Get feature IDs that were created
+        features_after = feature_state.list_features()
+        new_features = features_after[features_before:]
+        
+        if new_features and scene_graph:
+            # Extract feature IDs
+            feature_ids = [f.get("id") for f in new_features if "id" in f]
+            if feature_ids:
+                created_features_by_action.append({
+                    "action": action_dict,
+                    "feature_ids": feature_ids,
+                    "feature_data": new_features,  # Store feature data for spatial queries
+                    "command": cmd
+                })
+    
+    # Create semantic entities for new features
+    if scene_graph and created_features_by_action:
+        for item in created_features_by_action:
+            try:
+                SceneGraphIntegrator.update_scene_graph_for_action(
+                    scene_graph,
+                    item["action"],
+                    item["feature_ids"],
+                    item["command"],
+                    feature_data_list=item.get("feature_data")  # Pass feature data
+                )
+            except Exception as e:
+                logger.warning(f"Failed to create scene graph entity: {e}")
     
     # Finalize terrain
     h, dune_mask_total, cliff_mask_total = builder.finalize()
@@ -280,325 +376,177 @@ def apply_actions(cmd: str, state: Dict, base_biome_fn=None, direct_actions: Lis
     # Generate splatmap
     splat = builder.build_splatmap()
     
-    return h, feature_state.to_dict(), splat
-
-# _reapply_feature is now replaced by _apply_feature_to_builder
-# Kept for backward compatibility
-def _reapply_feature(h: np.ndarray, feat: Dict, dune_mask: np.ndarray, seed: int):
-    """Legacy reapply feature - now uses builder pattern."""
-    _apply_feature_to_builder_legacy(h, feat, dune_mask, seed)
-
-
-def _apply_feature_to_builder_legacy(h: np.ndarray, feat: Dict, dune_mask: np.ndarray, seed: int):
-    """Legacy helper to apply feature to heightmap directly."""
-    ftype = feat.get("type")
+    # Save scene graph to state
+    if scene_graph:
+        try:
+            state["semantic_scene"] = SceneGraphSerializer.to_dict(scene_graph)
+        except Exception as e:
+            logger.warning(f"Failed to save scene graph: {e}")
     
-    if ftype in ("mountain", "hill"):
-        cx, cy = feat["x"], feat["y"]
-        radius = feat.get("radius", 56 if ftype == "mountain" else 42)
-        height = feat.get("height", 0.75 if ftype == "mountain" else 0.45)
-        
-        if ftype == "mountain":
-            stamp = generate_mountain(cx, cy, radius, height)
-        else:
-            stamp = generate_hill(cx, cy, radius, height)
-        
-        stamp_primitive(h, stamp, BlendingMode.MAX)
+    # Update state with feature state
+    updated_state = feature_state.to_dict()
+    updated_state["semantic_scene"] = state.get("semantic_scene", {})
     
-    elif ftype == "mesa":
-        cx, cy = feat["x"], feat["y"]
-        radius = feat.get("radius", 56)
-        height = feat.get("height", 0.65)
-        flatness = feat.get("flatness", 0.3)
-        stamp = generate_mesa(cx, cy, radius, height, flatness)
-        stamp_primitive(h, stamp, BlendingMode.MAX)
-    
-    elif ftype == "plateau":
-        cx, cy = feat["x"], feat["y"]
-        width = feat.get("width", 80)
-        length = feat.get("length", 120)
-        height = feat.get("height", 0.50)
-        orientation = feat.get("orientation", 0.0)
-        stamp = generate_plateau(cx, cy, width, length, height, orientation)
-        stamp_primitive(h, stamp, BlendingMode.MAX)
-    
-    elif ftype == "valley":
-        cx, cy = feat["x"], feat["y"]
-        radius = feat.get("radius", 64)
-        depth = feat.get("depth", 0.55)  # Increased default depth
-        stamp = generate_valley(cx, cy, radius, depth)
-        stamp_primitive(h, stamp, BlendingMode.SUBTRACT)
-    
-    elif ftype == "canyon":
-        start = (feat["x0"], feat["y0"])
-        end = (feat["x1"], feat["y1"])
-        width = feat.get("width", 12)
-        depth = feat.get("depth", 0.60)
-        falloff = feat.get("falloff", 0.5)
-        stamp = generate_canyon(start, end, width, depth, falloff)
-        stamp_primitive(h, stamp, BlendingMode.SUBTRACT)
-    
-    elif ftype == "cliff":
-        cx, cy = feat["x"], feat["y"]
-        length = feat.get("length", 80)
-        height = feat.get("height", 0.55)
-        orientation = feat.get("orientation", 0.0)
-        steepness = feat.get("steepness", 0.9)
-        stamp = generate_cliff(cx, cy, length, height, orientation, steepness)
-        stamp_primitive(h, stamp, BlendingMode.MAX)
-    
-    elif ftype == "slope":
-        if "start" in feat and "end" in feat:
-            start = tuple(feat["start"])
-            end = tuple(feat["end"])
-            width = feat.get("width", 40)
-            height = feat.get("height", 0.35)
-            falloff = feat.get("falloff", 0.3)
-            stamp = generate_slope(start, end, width, height, falloff)
-        else:
-            cx, cy = feat["x"], feat["y"]
-            radius = feat.get("radius", 60)
-            height = feat.get("height", 0.35)
-            direction = feat.get("direction", 0.0)
-            steepness = feat.get("steepness", 0.5)
-            stamp = generate_slope_radial(cx, cy, radius, height, direction, steepness)
-        stamp_primitive(h, stamp, BlendingMode.ADD)
-    
-    elif ftype == "dunes":
-        box = (feat["x0"], feat["y0"], feat["x1"], feat["y1"])
-        amp = feat.get("amp", 0.08)
-        freq = feat.get("freq", 18.0)
-        angle = feat.get("angle", 20.0)
-        stamp = generate_dunes(box, amp, freq, angle, seed)
-        stamp_primitive(h, stamp, BlendingMode.ADD)
-        dune_mask[box[1]:box[3], box[0]:box[2]] = np.maximum(
-            dune_mask[box[1]:box[3], box[0]:box[2]], 
-            generate_dune_mask(box)[box[1]:box[3], box[0]:box[2]]
-        )
-
+    return h, updated_state, splat
 
 def _apply_feature_to_builder(builder: TerrainBuilder, feat: Dict, seed: int):
     """Apply a feature dictionary to builder (used by new architecture)."""
-    from .engine.commands import _apply_feature_to_builder as apply_to_builder
-    apply_to_builder(builder, feat, seed)
+    from .engine.commands import _apply_feature_to_builder as apply_to_builder_impl
+    apply_to_builder_impl(builder, feat, seed)
 
-# _execute_action is now replaced by ActionCommand pattern
-# Kept for backward compatibility if needed
-def _execute_action(action: Dict, h: np.ndarray, feature_state: FeatureState, 
-                   dune_mask: np.ndarray, seed: int):
-    """Legacy execute action - now uses command pattern."""
-    from .engine.commands import create_command_from_dict
-    from .engine.builder import TerrainBuilder
+
+# ============================================================================
+# Helper Functions for Feature Creation
+# ============================================================================
+
+def _apply_param_modifier_or_variation(
+    base_value: float,
+    modifiers: Dict,
+    param_name: str,
+    modifier_key: str,
+    variation_config: Dict,
+    variation_seed: int,
+    is_int: bool = False
+) -> float:
+    """
+    Generic logic for applying modifier or variation to a parameter.
     
-    builder = TerrainBuilder(lambda s: h, seed)  # Use existing heightmap as base
-    builder.dune_mask = dune_mask
-    command = create_command_from_dict(action)
-    command.execute(builder, feature_state, seed)
-    h[:] = builder.heightmap[:]
-    dune_mask[:] = builder.dune_mask[:]
+    Priority order:
+    1. Percentage modifier (e.g., "height_percent": 20 → 120% of base)
+    2. Keyword modifier (e.g., "taller" → 130% of base)
+    3. Automatic variation (using VariationEngine with config)
+    
+    Args:
+        base_value: Base parameter value
+        modifiers: User modifiers dictionary
+        param_name: Parameter name ("height", "depth", "radius", "width")
+        modifier_key: Modifier keyword ("taller", "deeper", "wider")
+        variation_config: Configuration dict with variation settings
+        variation_seed: Deterministic seed for variation
+        is_int: Whether to return integer value
+        
+    Returns:
+        Modified or varied parameter value
+    """
+    percent_key = f"{param_name}_percent"
+    
+    # Priority 1: Percentage modifier
+    if modifiers.get(percent_key):
+        value = base_value * (1.0 + modifiers[percent_key] / 100.0)
+    # Priority 2: Keyword modifier
+    elif modifiers.get(modifier_key):
+        value = base_value * 1.3
+    # Priority 3: Automatic variation
+    else:
+        variation_key = f"{param_name}_variation"
+        min_key = f"{param_name}_min"
+        max_key = f"{param_name}_max"
+        
+        if is_int:
+            value = VariationEngine.apply_variation_int(
+                int(base_value),
+                variation_config.get(variation_key, 0.10),
+                variation_seed,
+                variation_config.get(min_key),
+                variation_config.get(max_key)
+            )
+        else:
+            value = VariationEngine.apply_variation(
+                base_value,
+                variation_config.get(variation_key, 0.10),
+                variation_seed,
+                variation_config.get(min_key),
+                variation_config.get(max_key)
+            )
+    
+    return int(value) if is_int else float(value)
+
+
+def _generate_linear_feature_coords(cx: int, cy: int, length: int, seed: int) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+    """
+    Generate start/end coordinates for linear features with random orientation.
+    
+    Used by: canyon, ridge, ravine, pass, spur
+    
+    Args:
+        cx, cy: Center coordinates
+        length: Length of the linear feature
+        seed: Deterministic seed for orientation
+        
+    Returns:
+        (start, end) tuple of (x, y) coordinates, clamped to terrain bounds
+    """
+    rng = np.random.RandomState(seed)
+    orientation = rng.uniform(0, 360)
+    
+    half_len = length // 2
+    ang_rad = np.deg2rad(orientation)
+    
+    # Calculate start/end points
+    start = (
+        int(cx - half_len * np.cos(ang_rad)),
+        int(cy - half_len * np.sin(ang_rad))
+    )
+    end = (
+        int(cx + half_len * np.cos(ang_rad)),
+        int(cy + half_len * np.sin(ang_rad))
+    )
+    
+    # Clamp to terrain bounds
+    start = (max(0, min(RES-1, start[0])), max(0, min(RES-1, start[1])))
+    end = (max(0, min(RES-1, end[0])), max(0, min(RES-1, end[1])))
+    
+    return start, end
+
+
+def _generate_bounding_box(cx: int, cy: int, radius: int) -> Tuple[int, int, int, int]:
+    """
+    Generate bounding box for area features.
+    
+    Used by: dunes, terraces
+    
+    Args:
+        cx, cy: Center coordinates
+        radius: Radius/half-size of the area
+        
+    Returns:
+        (x0, y0, x1, y1) bounding box, clamped to terrain bounds
+    """
+    x0 = max(0, cx - radius)
+    y0 = max(0, cy - radius)
+    x1 = min(RES, cx + radius)
+    y1 = min(RES, cy + radius)
+    return (x0, y0, x1, y1)
+
+
+# ============================================================================
+# Feature Creation
+# ============================================================================
 
 def _create_feature(ftype: str, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
     """
     Create a feature dictionary from parameters.
     
+    Uses FeatureRegistry for defaults, ensuring consistency.
     Adds subtle, conservative variation when no explicit modifiers are given.
     Variation is bounded to prevent spikes and maintain smooth Gaussian falloff.
+    
+    NOTE: This function is being phased out - logic is migrating to FeatureRegistry.
+    Tries registry first, falls back to legacy code if not implemented yet.
     """
+    # Try to create using registry (new architecture)
+    feat = FeatureRegistry.create_feature(ftype, cx, cy, modifiers, seed)
+    if feat is not None:
+        return feat
+    
+    # Fallback to legacy implementation (being phased out)
+    # Get defaults from registry
+    defaults = FeatureRegistry.get_defaults(ftype)
+    
     # Derive deterministic variation seed from position and global seed
     variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
     
-    if ftype == "mountain":
-        base_height = 0.75
-        base_radius = 56
-        
-        # Apply modifiers if present
-        if modifiers.get("height_percent"):
-            height = base_height * (1.0 + modifiers["height_percent"] / 100.0)
-        elif modifiers.get("taller"):
-            height = base_height * 1.3
-        else:
-            # Apply subtle variation (only when no explicit modifier)
-            cfg = VARIATION_CONFIG["mountain"]
-            height = VariationEngine.apply_variation(
-                base_height, cfg["height_variation"], variation_seed,
-                cfg["height_min"], cfg["height_max"]
-            )
-        
-        if modifiers.get("width_percent"):
-            radius = int(base_radius * (1.0 + modifiers["width_percent"] / 100.0))
-        elif modifiers.get("wider"):
-            radius = int(base_radius * 1.3)
-        else:
-            # Apply subtle variation
-            cfg = VARIATION_CONFIG["mountain"]
-            radius = VariationEngine.apply_variation_int(
-                base_radius, cfg["radius_variation"], variation_seed + 1,
-                cfg["radius_min"], cfg["radius_max"]
-            )
-        
-        return {"type": "mountain", "x": cx, "y": cy, "radius": radius, "height": height}
-    
-    elif ftype == "hill":
-        base_height = 0.45
-        base_radius = 42
-        
-        if modifiers.get("height_percent"):
-            height = base_height * (1.0 + modifiers["height_percent"] / 100.0)
-        elif modifiers.get("taller"):
-            height = base_height * 1.3
-        else:
-            cfg = VARIATION_CONFIG["hill"]
-            height = VariationEngine.apply_variation(
-                base_height, cfg["height_variation"], variation_seed,
-                cfg["height_min"], cfg["height_max"]
-            )
-        
-        if modifiers.get("width_percent"):
-            radius = int(base_radius * (1.0 + modifiers["width_percent"] / 100.0))
-        elif modifiers.get("wider"):
-            radius = int(base_radius * 1.3)
-        else:
-            cfg = VARIATION_CONFIG["hill"]
-            radius = VariationEngine.apply_variation_int(
-                base_radius, cfg["radius_variation"], variation_seed + 1,
-                cfg["radius_min"], cfg["radius_max"]
-            )
-        
-        return {"type": "hill", "x": cx, "y": cy, "radius": radius, "height": height}
-    
-    elif ftype == "valley":
-        base_depth = 0.55
-        base_radius = 64
-        
-        if modifiers.get("depth_percent"):
-            depth = base_depth * (1.0 + modifiers["depth_percent"] / 100.0)
-        elif modifiers.get("deeper"):
-            depth = base_depth * 1.3
-        else:
-            cfg = VARIATION_CONFIG["valley"]
-            depth = VariationEngine.apply_variation(
-                base_depth, cfg["depth_variation"], variation_seed,
-                cfg["depth_min"], cfg["depth_max"]
-            )
-        
-        if modifiers.get("width_percent"):
-            radius = int(base_radius * (1.0 + modifiers["width_percent"] / 100.0))
-        elif modifiers.get("wider"):
-            radius = int(base_radius * 1.3)
-        else:
-            cfg = VARIATION_CONFIG["valley"]
-            radius = VariationEngine.apply_variation_int(
-                base_radius, cfg["radius_variation"], variation_seed + 1,
-                cfg["radius_min"], cfg["radius_max"]
-            )
-        
-        return {"type": "valley", "x": cx, "y": cy, "radius": radius, "depth": depth}
-    
-    elif ftype == "dunes":
-        cfg = VARIATION_CONFIG["dunes"]
-        base_r = 96
-        
-        # Apply subtle variation to dune parameters
-        amp = VariationEngine.apply_variation(0.08, cfg["amp_variation"], variation_seed)
-        freq = VariationEngine.apply_variation(18.0, cfg["freq_variation"], variation_seed + 1)
-        angle = VariationEngine.apply_variation(20.0, cfg["angle_variation"], variation_seed + 2)
-        
-        # Radius variation
-        r = VariationEngine.apply_variation_int(
-            base_r, cfg["radius_variation"], variation_seed + 3,
-            cfg["radius_min"], cfg["radius_max"]
-        )
-        
-        x0 = max(0, cx - r)
-        y0 = max(0, cy - r)
-        x1 = min(RES, cx + r)
-        y1 = min(RES, cy + r)
-        
-        return {
-            "type": "dunes",
-            "x0": x0, "y0": y0, "x1": x1, "y1": y1,
-            "amp": amp, "freq": freq, "angle": angle
-        }
-    
-    elif ftype == "mesa":
-        cfg = VARIATION_CONFIG["mountain"]  # Use mountain config as base
-        base_height = 0.65
-        base_radius = 56
-        
-        height = VariationEngine.apply_variation(
-            base_height, cfg["height_variation"], variation_seed,
-            cfg["height_min"] * 0.9, cfg["height_max"] * 0.95
-        )
-        radius = VariationEngine.apply_variation_int(
-            base_radius, cfg["radius_variation"], variation_seed + 1,
-            cfg["radius_min"], cfg["radius_max"]
-        )
-        
-        return {"type": "mesa", "x": cx, "y": cy, "radius": radius, "height": height, "flatness": 0.3}
-    
-    elif ftype == "plateau":
-        base_height = 0.50
-        base_width = 80
-        base_length = 120
-        
-        height = VariationEngine.apply_variation(base_height, 0.10, variation_seed, 0.35, 0.70)
-        width = VariationEngine.apply_variation_int(base_width, 0.15, variation_seed + 1, 60, 120)
-        length = VariationEngine.apply_variation_int(base_length, 0.15, variation_seed + 2, 80, 160)
-        
-        return {"type": "plateau", "x": cx, "y": cy, "width": width, "length": length,
-                "height": height, "orientation": 0.0}
-    
-    elif ftype == "cliff":
-        base_length = 80
-        base_height = 0.55
-        
-        length = VariationEngine.apply_variation_int(base_length, 0.15, variation_seed, 50, 120)
-        height = VariationEngine.apply_variation(base_height, 0.10, variation_seed + 1, 0.40, 0.75)
-        
-        return {"type": "cliff", "x": cx, "y": cy, "length": length, "height": height,
-                "orientation": 0.0, "steepness": 0.9}
-    
-    elif ftype == "canyon":
-        # Canyons need start/end points - use center as midpoint
-        base_length = 100
-        base_width = 12
-        
-        length = VariationEngine.apply_variation_int(base_length, 0.20, variation_seed, 60, 150)
-        width = VariationEngine.apply_variation_int(base_width, 0.15, variation_seed + 1, 8, 18)
-        
-        # Generate orientation from seed
-        import numpy as np
-        rng = np.random.RandomState(variation_seed + 2)
-        orientation = rng.uniform(0, 360)
-        
-        # Create start/end points
-        half_len = length // 2
-        ang_rad = np.deg2rad(orientation)
-        start = (int(cx - half_len * np.cos(ang_rad)), int(cy - half_len * np.sin(ang_rad)))
-        end = (int(cx + half_len * np.cos(ang_rad)), int(cy + half_len * np.sin(ang_rad)))
-        
-        # Clamp to bounds
-        start = (max(0, min(RES-1, start[0])), max(0, min(RES-1, start[1])))
-        end = (max(0, min(RES-1, end[0])), max(0, min(RES-1, end[1])))
-        
-        return {"type": "canyon", "x0": start[0], "y0": start[1], "x1": end[0], "y1": end[1],
-                "width": width, "depth": 0.60, "falloff": 0.5}
-    
-    elif ftype == "slope":
-        # Default to radial slope
-        base_radius = 60
-        base_height = 0.35
-        
-        radius = VariationEngine.apply_variation_int(base_radius, 0.15, variation_seed, 40, 90)
-        height = VariationEngine.apply_variation(base_height, 0.10, variation_seed + 1, 0.25, 0.50)
-        
-        import numpy as np
-        rng = np.random.RandomState(variation_seed + 2)
-        direction = rng.uniform(0, 360)
-        
-        return {"type": "slope", "x": cx, "y": cy, "radius": radius, "height": height,
-                "direction": direction, "steepness": 0.5}
-    
+    # Legacy code removed - all feature creation moved to FeatureRegistry
     return None
 
 def _modify_feature(feat: Dict, modifiers: Dict):
@@ -626,6 +574,109 @@ def _modify_feature(feat: Dict, modifiers: Dict):
             feat["radius"] = int(min(128, feat.get("radius", 64) * (1.0 + modifiers["width_percent"] / 100.0)))
         elif modifiers.get("wider"):
             feat["radius"] = int(min(128, feat.get("radius", 64) * 1.3))
+    
+    elif ftype in ("canyon", "ravine"):
+        if modifiers.get("depth_percent"):
+            feat["depth"] = min(1.0, feat.get("depth", 0.60) * (1.0 + modifiers["depth_percent"] / 100.0))
+        elif modifiers.get("deeper"):
+            feat["depth"] = min(1.0, feat.get("depth", 0.60) * 1.3)
+        
+        if modifiers.get("width_percent"):
+            feat["width"] = int(min(128, feat.get("width", 12) * (1.0 + modifiers["width_percent"] / 100.0)))
+        elif modifiers.get("wider"):
+            feat["width"] = int(min(128, feat.get("width", 12) * 1.3))
+    
+    elif ftype in ("crater", "basin"):
+        if modifiers.get("depth_percent"):
+            feat["depth"] = min(1.0, feat.get("depth", 0.55) * (1.0 + modifiers["depth_percent"] / 100.0))
+        elif modifiers.get("deeper"):
+            feat["depth"] = min(1.0, feat.get("depth", 0.55) * 1.3)
+        
+        if modifiers.get("width_percent"):
+            feat["radius"] = int(min(128, feat.get("radius", 64) * (1.0 + modifiers["width_percent"] / 100.0)))
+        elif modifiers.get("wider"):
+            feat["radius"] = int(min(128, feat.get("radius", 64) * 1.3))
+    
+    elif ftype in ("mesa", "plateau", "cliff", "mound", "pinnacle"):
+        if modifiers.get("height_percent"):
+            feat["height"] = min(1.0, feat.get("height", 0.5) * (1.0 + modifiers["height_percent"] / 100.0))
+        elif modifiers.get("taller"):
+            feat["height"] = min(1.0, feat.get("height", 0.5) * 1.3)
+        
+        if modifiers.get("width_percent"):
+            if "radius" in feat:
+                feat["radius"] = int(min(128, feat.get("radius", 48) * (1.0 + modifiers["width_percent"] / 100.0)))
+            elif "width" in feat:
+                feat["width"] = int(min(128, feat.get("width", 48) * (1.0 + modifiers["width_percent"] / 100.0)))
+                if "length" in feat:  # For plateaus
+                    feat["length"] = int(min(200, feat.get("length", 120) * (1.0 + modifiers["width_percent"] / 100.0)))
+        elif modifiers.get("wider"):
+            if "radius" in feat:
+                feat["radius"] = int(min(128, feat.get("radius", 48) * 1.3))
+            elif "width" in feat:
+                feat["width"] = int(min(128, feat.get("width", 48) * 1.3))
+                if "length" in feat:
+                    feat["length"] = int(min(200, feat.get("length", 120) * 1.3))
+    
+    elif ftype == "volcano":
+        if modifiers.get("height_percent"):
+            feat["height"] = min(1.0, feat.get("height", 0.80) * (1.0 + modifiers["height_percent"] / 100.0))
+        elif modifiers.get("taller"):
+            feat["height"] = min(1.0, feat.get("height", 0.80) * 1.3)
+        
+        if modifiers.get("width_percent"):
+            feat["base_radius"] = int(min(128, feat.get("base_radius", 56) * (1.0 + modifiers["width_percent"] / 100.0)))
+        elif modifiers.get("wider"):
+            feat["base_radius"] = int(min(128, feat.get("base_radius", 56) * 1.3))
+    
+    elif ftype in ("ridge", "spur"):
+        if modifiers.get("height_percent"):
+            if "height" in feat:
+                feat["height"] = min(1.0, feat.get("height", 0.50) * (1.0 + modifiers["height_percent"] / 100.0))
+            elif "base_height" in feat:
+                feat["base_height"] = min(1.0, feat.get("base_height", 0.60) * (1.0 + modifiers["height_percent"] / 100.0))
+        elif modifiers.get("taller"):
+            if "height" in feat:
+                feat["height"] = min(1.0, feat.get("height", 0.50) * 1.3)
+            elif "base_height" in feat:
+                feat["base_height"] = min(1.0, feat.get("base_height", 0.60) * 1.3)
+        
+        if modifiers.get("width_percent"):
+            feat["width"] = int(min(128, feat.get("width", 20) * (1.0 + modifiers["width_percent"] / 100.0)))
+        elif modifiers.get("wider"):
+            feat["width"] = int(min(128, feat.get("width", 20) * 1.3))
+    
+    elif ftype == "pass":
+        if modifiers.get("depth_percent"):
+            feat["depth"] = min(1.0, feat.get("depth", 0.40) * (1.0 + modifiers["depth_percent"] / 100.0))
+        elif modifiers.get("deeper"):
+            feat["depth"] = min(1.0, feat.get("depth", 0.40) * 1.3)
+        
+        if modifiers.get("width_percent"):
+            feat["width"] = int(min(128, feat.get("width", 30) * (1.0 + modifiers["width_percent"] / 100.0)))
+        elif modifiers.get("wider"):
+            feat["width"] = int(min(128, feat.get("width", 30) * 1.3))
+    
+    elif ftype == "terraces":
+        if modifiers.get("height_percent"):
+            feat["height_per_level"] = feat.get("height_per_level", 0.10) * (1.0 + modifiers["height_percent"] / 100.0)
+        elif modifiers.get("taller"):
+            feat["height_per_level"] = feat.get("height_per_level", 0.10) * 1.3
+        
+        if modifiers.get("width_percent"):
+            feat["width_per_level"] = int(feat.get("width_per_level", 20) * (1.0 + modifiers["width_percent"] / 100.0))
+        elif modifiers.get("wider"):
+            feat["width_per_level"] = int(feat.get("width_per_level", 20) * 1.3)
+    
+    elif ftype == "dunes":
+        if modifiers.get("taller"):
+            feat["amp"] = feat.get("amp", 0) * 1.3
+        if modifiers.get("height_percent") is not None:
+            feat["amp"] = feat.get("amp", 0) * (1.0 + modifiers["height_percent"] / 100.0)
+        if modifiers.get("wider"):  # For dunes, wider could mean lower frequency
+            feat["freq"] = feat.get("freq", 0) * 0.7
+        if modifiers.get("width_percent") is not None:
+            feat["freq"] = feat.get("freq", 0) * (1.0 - modifiers["width_percent"] / 100.0)  # Inverse for frequency
 
 # Export functions for backward compatibility
 def to_png_16bit_gray(h: np.ndarray, path: str):

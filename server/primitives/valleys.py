@@ -3,8 +3,7 @@ import numpy as np
 from scipy.ndimage import gaussian_filter
 from ..utils import clamp01
 from typing import Tuple
-
-RES = 512
+from ..engine.config import RES
 
 def generate_valley(cx: int, cy: int, radius: int, depth: float) -> np.ndarray:
     """

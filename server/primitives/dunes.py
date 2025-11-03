@@ -3,8 +3,7 @@ import numpy as np
 from noise import pnoise2
 from ..utils import clamp01
 from typing import Tuple
-
-RES = 512
+from ..engine.config import RES
 
 def generate_dunes(region: Tuple[int, int, int, int], amp: float = 0.08, freq: float = 18.0, 
                    angle_deg: float = 20.0, seed: int = 0) -> np.ndarray:

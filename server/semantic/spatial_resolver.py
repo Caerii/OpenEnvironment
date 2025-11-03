@@ -1,15 +1,14 @@
 """Spatial resolution - Interprets position commands."""
 from typing import Tuple, Optional, List, Dict
 from ..engine.spatial import region_box, random_point_in, random_points_in, clamp_coords
+from ..engine.config import RES
 
-RES = 512
-
-def resolve_position(position_spec: Dict, existing_features: List[Dict] = None, seed: int = 0) -> Tuple[int, int]:
+def resolve_position(position_spec: Optional[Dict], existing_features: List[Dict] = None, seed: int = 0) -> Tuple[int, int]:
     """
     Resolve a position specification to actual coordinates.
     
     Args:
-        position_spec: Dictionary with "region", "coords", or relative positioning
+        position_spec: Dictionary with "region", "coords", or relative positioning (or None)
         existing_features: List of existing features for relative positioning
         seed: Random seed for deterministic generation
         
@@ -18,6 +17,9 @@ def resolve_position(position_spec: Dict, existing_features: List[Dict] = None, 
     """
     if existing_features is None:
         existing_features = []
+    
+    if position_spec is None:
+        position_spec = {}
     
     # Direct coordinates
     if "coords" in position_spec and position_spec["coords"]:
@@ -37,14 +39,14 @@ def resolve_position(position_spec: Dict, existing_features: List[Dict] = None, 
     box = region_box("center")
     return random_point_in(box, seed)
 
-def resolve_multiple_positions(position_spec: Dict, count: int, 
+def resolve_multiple_positions(position_spec: Optional[Dict], count: int, 
                                existing_features: List[Dict] = None,
                                min_distance: int = 20, seed: int = 0) -> List[Tuple[int, int]]:
     """
     Resolve multiple positions (e.g., "scattered", "three hills").
     
     Args:
-        position_spec: Position specification
+        position_spec: Position specification or None
         count: Number of positions needed
         existing_features: Existing features for spacing
         min_distance: Minimum distance between positions
@@ -55,6 +57,9 @@ def resolve_multiple_positions(position_spec: Dict, count: int,
     """
     if existing_features is None:
         existing_features = []
+    
+    if position_spec is None:
+        position_spec = {}
     
     # Scattered distribution
     if position_spec.get("distribution") == "scattered":

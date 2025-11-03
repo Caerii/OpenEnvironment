@@ -2,8 +2,7 @@
 import numpy as np
 from noise import pnoise2
 from ..utils import normalize01
-
-RES = 512
+from ..engine.config import RES
 
 def base_flat(seed=0) -> np.ndarray:
     """

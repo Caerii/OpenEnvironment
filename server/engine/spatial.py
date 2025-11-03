@@ -1,8 +1,7 @@
 """Spatial utilities - Position resolution and region handling."""
 from typing import Tuple, List
 import numpy as np
-
-RES = 512
+from .config import RES
 
 def region_box(keyword: str) -> Tuple[int, int, int, int]:
     """

@@ -2,6 +2,9 @@
 import os
 import json
 import sys
+import logging
+
+logger = logging.getLogger(__name__)
 import tempfile
 from typing import Dict, Optional
 from pathlib import Path
@@ -67,7 +70,7 @@ def atomic_read_state(state_path: str, default: Optional[Dict] = None) -> Dict:
                 unlock_file(f)
     except (json.JSONDecodeError, ValueError, IOError) as e:
         # Corrupted state - return default
-        print(f"Warning: Failed to read state file ({e}), using default")
+        logger.warning(f"Failed to read state file ({e}), using default")
         return default.copy()
 
 

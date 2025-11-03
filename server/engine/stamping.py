@@ -3,8 +3,7 @@ import numpy as np
 from typing import Optional
 from ..utils import clamp01
 from scipy.ndimage import gaussian_filter, distance_transform_edt
-
-RES = 512
+from .config import RES
 
 class BlendingMode:
     """Blending mode constants."""

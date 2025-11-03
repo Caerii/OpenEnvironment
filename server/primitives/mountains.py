@@ -2,8 +2,7 @@
 import numpy as np
 from noise import pnoise2
 from ..utils import clamp01
-
-RES = 512
+from ..engine.config import RES
 
 def generate_mountain(cx: int, cy: int, radius: int, height: float, steepness: float = 1.0,
                       use_noise: bool = True, seed: int = 0) -> np.ndarray:

@@ -14,9 +14,12 @@ Architecture:
 
 import inspect
 import json
+import logging
 from typing import Dict, List, Any, Callable, Optional, get_type_hints
 from enum import Enum
 from dataclasses import dataclass, field
+
+logger = logging.getLogger(__name__)
 
 
 class ToolCategory(Enum):
@@ -166,11 +169,11 @@ class ToolRegistry:
         # Discover composite tools
         self._discover_composite_tools()
         
-        print(f"Tool Registry initialized with {len(self.tools)} tools:")
+        logger.info(f"Tool Registry initialized with {len(self.tools)} tools:")
         for category in ToolCategory:
             count = len([t for t in self.tools.values() if t.category == category])
             if count > 0:
-                print(f"  - {category.value}: {count} tools")
+                logger.info(f"  - {category.value}: {count} tools")
     
     def _discover_primitive_tools(self):
         """Discover primitive terrain generation tools."""
@@ -355,6 +358,224 @@ class ToolRegistry:
                 "Create slopes connecting different elevations"
             ]
         )
+        
+        # Crater
+        self.register_tool(
+            name="add_crater",
+            func=None,
+            description="Add a crater to the terrain. Creates a circular depression with elevated rim around the perimeter.",
+            category=ToolCategory.PRIMITIVE,
+            parameters=[
+                ToolParameter("position", "object", "Center position", True,
+                             properties={"x": {"type": "integer", "minimum": 0, "maximum": 511},
+                                       "y": {"type": "integer", "minimum": 0, "maximum": 511}}),
+                ToolParameter("radius", "integer", "Crater radius", False, default=64, minimum=30, maximum=120),
+                ToolParameter("depth", "number", "Maximum depth (0-1)", False, default=0.55, minimum=0.2, maximum=1.0),
+                ToolParameter("rim_height", "number", "Height of elevated rim", False, default=0.1, minimum=0.05, maximum=0.3),
+                ToolParameter("steepness", "number", "Wall steepness", False, default=1.0, minimum=0.5, maximum=2.0),
+            ],
+            examples=[
+                "Add an impact crater",
+                "Create a volcanic crater",
+                "Add craters scattered across the terrain"
+            ]
+        )
+        
+        # Ridge
+        self.register_tool(
+            name="add_ridge",
+            func=None,
+            description="Add a ridge (linear elevated feature) to the terrain. Creates a raised line between two points.",
+            category=ToolCategory.PRIMITIVE,
+            parameters=[
+                ToolParameter("start", "object", "Start position", True,
+                             properties={"x": {"type": "integer"}, "y": {"type": "integer"}}),
+                ToolParameter("end", "object", "End position", True,
+                             properties={"x": {"type": "integer"}, "y": {"type": "integer"}}),
+                ToolParameter("width", "integer", "Ridge width", False, default=20, minimum=10, maximum=40),
+                ToolParameter("height", "number", "Maximum height", False, default=0.50, minimum=0.2, maximum=0.8),
+                ToolParameter("steepness", "number", "Side steepness", False, default=0.8, minimum=0.3, maximum=1.0),
+            ],
+            examples=[
+                "Add a mountain ridge",
+                "Create ridges connecting peaks",
+                "Add a ridge from (100, 100) to (400, 400)"
+            ]
+        )
+        
+        # Ravine
+        self.register_tool(
+            name="add_ravine",
+            func=None,
+            description="Add a ravine (narrow, steep valley) to the terrain. Similar to canyon but narrower and steeper.",
+            category=ToolCategory.PRIMITIVE,
+            parameters=[
+                ToolParameter("start", "object", "Start position", True,
+                             properties={"x": {"type": "integer"}, "y": {"type": "integer"}}),
+                ToolParameter("end", "object", "End position", True,
+                             properties={"x": {"type": "integer"}, "y": {"type": "integer"}}),
+                ToolParameter("width", "integer", "Ravine width", False, default=7, minimum=5, maximum=12),
+                ToolParameter("depth", "number", "Maximum depth", False, default=0.60, minimum=0.3, maximum=1.0),
+                ToolParameter("steepness", "number", "Wall steepness", False, default=1.2, minimum=0.8, maximum=2.0),
+            ],
+            examples=[
+                "Add a narrow ravine",
+                "Create deep ravines",
+                "Add ravines cutting through the terrain"
+            ]
+        )
+        
+        # Volcano
+        self.register_tool(
+            name="add_volcano",
+            func=None,
+            description="Add a volcano (cone-shaped mountain) to the terrain. Can optionally include a crater at the top.",
+            category=ToolCategory.PRIMITIVE,
+            parameters=[
+                ToolParameter("position", "object", "Center position", True,
+                             properties={"x": {"type": "integer", "minimum": 0, "maximum": 511},
+                                       "y": {"type": "integer", "minimum": 0, "maximum": 511}}),
+                ToolParameter("base_radius", "integer", "Base radius", False, default=56, minimum=30, maximum=100),
+                ToolParameter("height", "number", "Peak height", False, default=0.80, minimum=0.5, maximum=1.0),
+                ToolParameter("crater_radius", "number", "Crater radius (fraction of base)", False, default=0.15, minimum=0.0, maximum=0.4),
+                ToolParameter("crater_depth", "number", "Crater depth", False, default=0.2, minimum=0.0, maximum=0.5),
+                ToolParameter("steepness", "number", "Cone steepness", False, default=1.2, minimum=0.8, maximum=2.0),
+            ],
+            examples=[
+                "Add a volcano",
+                "Create volcanic mountains",
+                "Add a volcano with a crater"
+            ]
+        )
+        
+        # Pass
+        self.register_tool(
+            name="add_pass",
+            func=None,
+            description="Add a mountain pass (depressed corridor) to the terrain. Creates a lowered pathway between elevated areas.",
+            category=ToolCategory.PRIMITIVE,
+            parameters=[
+                ToolParameter("start", "object", "Start position", True,
+                             properties={"x": {"type": "integer"}, "y": {"type": "integer"}}),
+                ToolParameter("end", "object", "End position", True,
+                             properties={"x": {"type": "integer"}, "y": {"type": "integer"}}),
+                ToolParameter("width", "integer", "Pass width", False, default=30, minimum=15, maximum=60),
+                ToolParameter("depth", "number", "Depression depth", False, default=0.40, minimum=0.2, maximum=0.7),
+                ToolParameter("elevation", "number", "Base elevation", False, default=0.3, minimum=0.1, maximum=0.6),
+            ],
+            examples=[
+                "Add a mountain pass",
+                "Create a pass between mountains",
+                "Add passes connecting valleys"
+            ]
+        )
+        
+        # Mound
+        self.register_tool(
+            name="add_mound",
+            func=None,
+            description="Add a mound (small rounded hill) to the terrain. Creates subtle elevation changes.",
+            category=ToolCategory.PRIMITIVE,
+            parameters=[
+                ToolParameter("position", "object", "Center position", True,
+                             properties={"x": {"type": "integer", "minimum": 0, "maximum": 511},
+                                       "y": {"type": "integer", "minimum": 0, "maximum": 511}}),
+                ToolParameter("radius", "integer", "Base radius", False, default=25, minimum=15, maximum=40),
+                ToolParameter("height", "number", "Peak height", False, default=0.20, minimum=0.1, maximum=0.35),
+            ],
+            examples=[
+                "Add mounds",
+                "Create small mounds",
+                "Add mounds scattered"
+            ]
+        )
+        
+        # Basin
+        self.register_tool(
+            name="add_basin",
+            func=None,
+            description="Add a basin (large flat depression) to the terrain. Creates a wide, shallow depression.",
+            category=ToolCategory.PRIMITIVE,
+            parameters=[
+                ToolParameter("position", "object", "Center position", True,
+                             properties={"x": {"type": "integer", "minimum": 0, "maximum": 511},
+                                       "y": {"type": "integer", "minimum": 0, "maximum": 511}}),
+                ToolParameter("radius", "integer", "Basin radius", False, default=120, minimum=60, maximum=200),
+                ToolParameter("depth", "number", "Maximum depth", False, default=0.50, minimum=0.2, maximum=0.8),
+                ToolParameter("flatness", "number", "Bottom flatness", False, default=0.5, minimum=0.0, maximum=1.0),
+            ],
+            examples=[
+                "Add a basin",
+                "Create large basins",
+                "Add flat basins"
+            ]
+        )
+        
+        # Pinnacle
+        self.register_tool(
+            name="add_pinnacle",
+            func=None,
+            description="Add a pinnacle (very narrow, very tall peak) to the terrain. Creates dramatic vertical features.",
+            category=ToolCategory.PRIMITIVE,
+            parameters=[
+                ToolParameter("position", "object", "Center position", True,
+                             properties={"x": {"type": "integer", "minimum": 0, "maximum": 511},
+                                       "y": {"type": "integer", "minimum": 0, "maximum": 511}}),
+                ToolParameter("radius", "integer", "Base radius", False, default=20, minimum=10, maximum=35),
+                ToolParameter("height", "number", "Peak height", False, default=0.90, minimum=0.6, maximum=1.0),
+                ToolParameter("steepness", "number", "Side steepness", False, default=2.0, minimum=1.2, maximum=3.0),
+            ],
+            examples=[
+                "Add a pinnacle",
+                "Create sharp pinnacles",
+                "Add tall pinnacles"
+            ]
+        )
+        
+        # Spur
+        self.register_tool(
+            name="add_spur",
+            func=None,
+            description="Add a spur (ridge extending from mountain) to the terrain. Creates ridges that decrease in height from start to end.",
+            category=ToolCategory.PRIMITIVE,
+            parameters=[
+                ToolParameter("start", "object", "Start position (attached to mountain)", True,
+                             properties={"x": {"type": "integer"}, "y": {"type": "integer"}}),
+                ToolParameter("end", "object", "End position (extends outward)", True,
+                             properties={"x": {"type": "integer"}, "y": {"type": "integer"}}),
+                ToolParameter("width", "integer", "Spur width", False, default=15, minimum=8, maximum=30),
+                ToolParameter("base_height", "number", "Height at start", False, default=0.60, minimum=0.3, maximum=0.9),
+                ToolParameter("end_height", "number", "Height at end", False, default=0.0, minimum=0.0, maximum=0.4),
+                ToolParameter("steepness", "number", "Side steepness", False, default=0.7, minimum=0.3, maximum=1.0),
+            ],
+            examples=[
+                "Add a spur",
+                "Create spurs extending from mountains",
+                "Add mountain spurs"
+            ]
+        )
+        
+        # Terraces
+        self.register_tool(
+            name="add_terraces",
+            func=None,
+            description="Add terraces (step-like multi-level feature) to the terrain. Creates multiple flat levels stacked vertically.",
+            category=ToolCategory.PRIMITIVE,
+            parameters=[
+                ToolParameter("region", "object", "Bounding box", True,
+                             properties={"x0": {"type": "integer"}, "y0": {"type": "integer"},
+                                       "x1": {"type": "integer"}, "y1": {"type": "integer"}}),
+                ToolParameter("levels", "integer", "Number of terrace levels", False, default=5, minimum=2, maximum=10),
+                ToolParameter("height_per_level", "number", "Height increase per level", False, default=0.10, minimum=0.05, maximum=0.20),
+                ToolParameter("width_per_level", "integer", "Width of each level", False, default=20, minimum=10, maximum=40),
+                ToolParameter("direction", "number", "Terrace progression direction", False, default=0.0, minimum=0.0, maximum=360.0),
+            ],
+            examples=[
+                "Add terraces",
+                "Create terraced hillsides",
+                "Add step-like terraces"
+            ]
+        )
     
     def _discover_operation_tools(self):
         """Discover operation tools (modify, remove, query)."""
@@ -401,7 +622,8 @@ class ToolRegistry:
             category=ToolCategory.OPERATION,
             parameters=[
                 ToolParameter("feature_type", "string", "Type of feature to query", False,
-                             enum=["mountain", "hill", "valley", "dunes", "cliff", "mesa", "plateau", "canyon", "slope"]),
+                             enum=["mountain", "hill", "valley", "dunes", "cliff", "mesa", "plateau", "canyon", "slope",
+                                   "crater", "ridge", "ravine", "volcano", "pass", "mound", "basin", "pinnacle", "spur", "terraces"]),
                 ToolParameter("region", "string", "Spatial region to query", False,
                              enum=["top-left", "top", "top-right", "left", "center", "right", "bottom-left", "bottom", "bottom-right"]),
             ],
@@ -538,11 +760,18 @@ class ToolRegistry:
         # Semantic entities (if available)
         if "semantic_scene" in state:
             lines.append("\nSemantic Entities:")
-            entities = state["semantic_scene"].get("entities", {})
-            for entity_id, entity in entities.items():
-                label = entity.get("label", entity_id)
-                feature_refs = entity.get("feature_refs", [])
-                lines.append(f"  - {label}: {len(feature_refs)} features")
+            entities = state["semantic_scene"].get("entities", [])
+            # Handle both list and dict formats
+            if isinstance(entities, list):
+                for entity in entities:
+                    label = entity.get("label", entity.get("id", "unknown"))
+                    feature_refs = entity.get("feature_refs", [])
+                    lines.append(f"  - {label}: {len(feature_refs)} features")
+            elif isinstance(entities, dict):
+                for entity_id, entity in entities.items():
+                    label = entity.get("label", entity_id)
+                    feature_refs = entity.get("feature_refs", [])
+                    lines.append(f"  - {label}: {len(feature_refs)} features")
         
         return "\n".join(lines)
     

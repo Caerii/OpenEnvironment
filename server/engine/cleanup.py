@@ -1,8 +1,11 @@
 """File cleanup utilities - Manage asset retention and cleanup."""
 import os
 import time
+import logging
 from pathlib import Path
 from typing import List, Tuple
+
+logger = logging.getLogger(__name__)
 
 # Retention policy: Keep last N assets + any newer than X hours
 MAX_ASSETS_TO_KEEP = 50  # Always keep last 50 generations
@@ -61,10 +64,10 @@ def cleanup_old_assets(assets_dir: str, keep_state: bool = True):
             os.remove(filepath)
             deleted_count += 1
         except OSError as e:
-            print(f"Warning: Failed to delete {filepath}: {e}")
+            logger.warning(f"Failed to delete {filepath}: {e}")
     
     if deleted_count > 0:
-        print(f"Cleaned up {deleted_count} old asset files")
+        logger.info(f"Cleaned up {deleted_count} old asset files")
 
 
 def cleanup_temp_files(assets_dir: str):
@@ -86,5 +89,5 @@ def cleanup_temp_files(assets_dir: str):
                 pass
     
     if deleted_count > 0:
-        print(f"Cleaned up {deleted_count} temporary files")
+        logger.info(f"Cleaned up {deleted_count} temporary files")
 

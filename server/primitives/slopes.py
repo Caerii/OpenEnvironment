@@ -2,8 +2,7 @@
 import numpy as np
 from ..utils import clamp01
 from scipy.ndimage import gaussian_filter
-
-RES = 512
+from ..engine.config import RES
 
 def generate_slope(start: tuple, end: tuple, width: int, height: float,
                    falloff: float = 0.3) -> np.ndarray:
