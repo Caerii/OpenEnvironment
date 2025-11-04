@@ -44,7 +44,7 @@ class AddFeatureCommand(ActionCommand):
         if builder is None:
             raise ValueError("Builder required for add feature action")
         
-        from ..terrain import _create_feature
+        from ..engine.feature_registry import FeatureRegistry
         from ..semantic.spatial_resolver import resolve_position, resolve_multiple_positions
         
         # Validate count
@@ -72,7 +72,7 @@ class AddFeatureCommand(ActionCommand):
         # Create and add features
         for idx, (cx, cy) in enumerate(positions):
             feature_seed = (position_seed + idx * 17) % (2**31)
-            feat = _create_feature(self.feature_type, cx, cy, self.modifiers, feature_seed)
+            feat = FeatureRegistry.create_feature(self.feature_type, cx, cy, self.modifiers, feature_seed)
             if feat:
                 feature_state.add_feature(feat)
                 # Apply feature immediately to builder
@@ -133,14 +133,14 @@ class ModifyFeatureCommand(ActionCommand):
     
     def execute(self, builder: Optional[TerrainBuilder], feature_state: FeatureState, seed: int):
         """Execute modify feature action."""
-        from ..terrain import _modify_feature
+        from ..engine.feature_registry import FeatureRegistry
         
         # If target_feature_ids provided, modify those specific features
         if self.target_feature_ids:
             for feature_id in self.target_feature_ids:
                 feat = feature_state.find_feature(feature_id=feature_id)
                 if feat:
-                    _modify_feature(feat, self.modifiers)
+                    FeatureRegistry.modify_feature(feat.get("type"), feat, self.modifiers)
         else:
             # Fall back to type/ordinal resolution
             feat = feature_state.find_feature(
@@ -148,7 +148,7 @@ class ModifyFeatureCommand(ActionCommand):
                 ordinal=self.ordinal
             )
             if feat:
-                _modify_feature(feat, self.modifiers)
+                FeatureRegistry.modify_feature(feat.get("type"), feat, self.modifiers)
             # Modification requires rebuild - handled by caller
     
     def to_dict(self) -> Dict:

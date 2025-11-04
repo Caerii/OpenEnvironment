@@ -1,4 +1,6 @@
 import os
+import re
+import json
 import logging
 from typing import Dict, List, Optional
 from dotenv import load_dotenv
@@ -47,7 +49,8 @@ class SemanticParser:
             - Each action has: kind, type, count, position, modifiers
         """
         # Check if this is a spatial query command
-        query_result = self._handle_spatial_query(command, scene_state)
+        from ..spatial_queries import handle_spatial_query
+        query_result = handle_spatial_query(command, scene_state)
         if query_result:
             return query_result
         
@@ -76,13 +79,12 @@ Output only valid JSON, no additional text."""
             
             # Extract JSON from response
             content = response.choices[0].message.content
-            import json
             parsed = json.loads(content)
             
             # Validate and normalize the structure
             return self._normalize_response(parsed)
             
-        except Exception as e:
+        except (ValueError, KeyError, ImportError, json.JSONDecodeError) as e:
             # Fallback to simple parsing on error
             logger.warning(f"LLM parsing failed: {e}, falling back to regex parser")
             return self._fallback_parse(command)
@@ -173,7 +175,7 @@ Output only valid JSON, no additional text."""
             if result["queries"]:
                 return result
             
-        except Exception as e:
+        except (ImportError, AttributeError, KeyError, ValueError) as e:
             logger.warning(f"Spatial query handling failed: {e}")
         
         return None
@@ -182,8 +184,6 @@ Output only valid JSON, no additional text."""
         """Extract entity reference from command."""
         # Simple extraction - look for common patterns
         # "the dunes", "mountains", "the mountains"
-        import re
-        
         patterns = [
             r"the\s+(\w+)",  # "the dunes"
             r"(\w+)\s+on\s+the",  # "mountains on the"
@@ -449,7 +449,7 @@ Examples with Scene Graph Context:
             
             return "\n".join(lines)
             
-        except Exception as e:
+        except (ImportError, AttributeError, KeyError) as e:
             logger.warning(f"Failed to generate scene graph context: {e}")
             return None
     

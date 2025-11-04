@@ -123,6 +123,12 @@ class MountainGenerator(FeatureGenerator):
         
         return {"type": "mountain", "x": cx, "y": cy, "radius": radius, "height": height, 
                 "use_noise": True}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify mountain parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "height", modifiers, max_value=1.0)
+        apply_modifier_to_param(feat, "radius", modifiers, max_value=128, is_int=True)
 
 
 class HillGenerator(FeatureGenerator):
@@ -158,6 +164,12 @@ class HillGenerator(FeatureGenerator):
         
         return {"type": "hill", "x": cx, "y": cy, "radius": radius, "height": height,
                 "use_noise": True}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify hill parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "height", modifiers, max_value=1.0)
+        apply_modifier_to_param(feat, "radius", modifiers, max_value=128, is_int=True)
 
 
 class MesaGenerator(FeatureGenerator):
@@ -185,6 +197,12 @@ class MesaGenerator(FeatureGenerator):
         radius = VariationEngine.apply_variation_int(56, 0.12, variation_seed + 1, 40, 85)
         
         return {"type": "mesa", "x": cx, "y": cy, "radius": radius, "height": height, "flatness": 0.3}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify mesa parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "height", modifiers, max_value=1.0)
+        apply_modifier_to_param(feat, "radius", modifiers, max_value=128, is_int=True)
 
 
 class PlateauGenerator(FeatureGenerator):
@@ -214,6 +232,13 @@ class PlateauGenerator(FeatureGenerator):
         
         return {"type": "plateau", "x": cx, "y": cy, "width": width, "length": length,
                 "height": height, "orientation": 0.0}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify plateau parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "height", modifiers, max_value=1.0)
+        apply_modifier_to_param(feat, "width", modifiers, max_value=128, is_int=True)
+        apply_modifier_to_param(feat, "length", modifiers, max_value=200, is_int=True)
 
 
 class ValleyGenerator(FeatureGenerator):
@@ -246,6 +271,12 @@ class ValleyGenerator(FeatureGenerator):
         )
         
         return {"type": "valley", "x": cx, "y": cy, "radius": radius, "depth": depth}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify valley parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "depth", modifiers, max_value=1.0, modifier_keyword="deeper")
+        apply_modifier_to_param(feat, "radius", modifiers, max_value=128, is_int=True)
 
 
 class CliffGenerator(FeatureGenerator):
@@ -274,6 +305,11 @@ class CliffGenerator(FeatureGenerator):
         
         return {"type": "cliff", "x": cx, "y": cy, "length": length, "height": height,
                 "orientation": 0.0, "steepness": 0.9}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify cliff parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "height", modifiers, max_value=1.0)
     
     def apply_special_effects(self, builder, feat: Dict, stamp: np.ndarray, seed: int):
         """Apply cliff mask for rock texture."""
@@ -324,6 +360,12 @@ class CraterGenerator(FeatureGenerator):
         
         return {"type": "crater", "x": cx, "y": cy, "radius": radius, "depth": depth,
                 "rim_height": rim_height, "steepness": 1.0}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify crater parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "depth", modifiers, max_value=1.0, modifier_keyword="deeper")
+        apply_modifier_to_param(feat, "radius", modifiers, max_value=128, is_int=True)
 
 
 class VolcanoGenerator(FeatureGenerator):
@@ -361,6 +403,12 @@ class VolcanoGenerator(FeatureGenerator):
         
         return {"type": "volcano", "x": cx, "y": cy, "base_radius": base_radius, "height": height,
                 "crater_radius": crater_radius, "crater_depth": crater_depth, "steepness": 1.2}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify volcano parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "height", modifiers, max_value=1.0)
+        apply_modifier_to_param(feat, "base_radius", modifiers, max_value=128, is_int=True)
 
 
 class MoundGenerator(FeatureGenerator):
@@ -387,6 +435,12 @@ class MoundGenerator(FeatureGenerator):
         radius = VariationEngine.apply_variation_int(25, 0.20, variation_seed + 1, 18, 35)
         
         return {"type": "mound", "x": cx, "y": cy, "radius": radius, "height": height}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify mound parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "height", modifiers, max_value=1.0)
+        apply_modifier_to_param(feat, "radius", modifiers, max_value=128, is_int=True)
 
 
 class BasinGenerator(FeatureGenerator):
@@ -414,6 +468,12 @@ class BasinGenerator(FeatureGenerator):
         flatness = VariationEngine.apply_variation(0.5, 0.20, variation_seed + 2, 0.3, 0.7)
         
         return {"type": "basin", "x": cx, "y": cy, "radius": radius, "depth": depth, "flatness": flatness}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify basin parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "depth", modifiers, max_value=1.0, modifier_keyword="deeper")
+        apply_modifier_to_param(feat, "radius", modifiers, max_value=128, is_int=True)
 
 
 class PinnacleGenerator(FeatureGenerator):
@@ -441,6 +501,12 @@ class PinnacleGenerator(FeatureGenerator):
         radius = VariationEngine.apply_variation_int(20, 0.20, variation_seed + 1, 15, 28)
         
         return {"type": "pinnacle", "x": cx, "y": cy, "radius": radius, "height": height, "steepness": 2.0}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify pinnacle parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "height", modifiers, max_value=1.0)
+        apply_modifier_to_param(feat, "radius", modifiers, max_value=128, is_int=True)
 
 
 # ============================================================================
@@ -477,6 +543,12 @@ class CanyonGenerator(FeatureGenerator):
         
         return {"type": "canyon", "x0": start[0], "y0": start[1], "x1": end[0], "y1": end[1],
                 "width": width, "depth": 0.60, "falloff": 0.5}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify canyon parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "depth", modifiers, max_value=1.0, modifier_keyword="deeper")
+        apply_modifier_to_param(feat, "width", modifiers, max_value=128, is_int=True)
 
 
 class RidgeGenerator(FeatureGenerator):
@@ -509,6 +581,12 @@ class RidgeGenerator(FeatureGenerator):
         
         return {"type": "ridge", "x0": start[0], "y0": start[1], "x1": end[0], "y1": end[1],
                 "width": width, "height": height, "steepness": 0.8}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify ridge parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "height", modifiers, max_value=1.0)
+        apply_modifier_to_param(feat, "width", modifiers, max_value=128, is_int=True)
 
 
 class RavineGenerator(FeatureGenerator):
@@ -541,6 +619,12 @@ class RavineGenerator(FeatureGenerator):
         
         return {"type": "ravine", "x0": start[0], "y0": start[1], "x1": end[0], "y1": end[1],
                 "width": width, "depth": depth, "steepness": 1.2}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify ravine parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "depth", modifiers, max_value=1.0, modifier_keyword="deeper")
+        apply_modifier_to_param(feat, "width", modifiers, max_value=128, is_int=True)
 
 
 class PassGenerator(FeatureGenerator):
@@ -573,6 +657,12 @@ class PassGenerator(FeatureGenerator):
         
         return {"type": "pass", "x0": start[0], "y0": start[1], "x1": end[0], "y1": end[1],
                 "width": width, "depth": depth, "elevation": 0.3}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify pass parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "depth", modifiers, max_value=1.0, modifier_keyword="deeper")
+        apply_modifier_to_param(feat, "width", modifiers, max_value=128, is_int=True)
 
 
 class SpurGenerator(FeatureGenerator):
@@ -606,6 +696,12 @@ class SpurGenerator(FeatureGenerator):
         
         return {"type": "spur", "x0": start[0], "y0": start[1], "x1": end[0], "y1": end[1],
                 "width": width, "base_height": base_height, "end_height": 0.0, "steepness": 0.7}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify spur parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "base_height", modifiers, max_value=1.0)
+        apply_modifier_to_param(feat, "width", modifiers, max_value=128, is_int=True)
 
 
 # ============================================================================
@@ -644,6 +740,20 @@ class DunesGenerator(FeatureGenerator):
         
         return {"type": "dunes", "x0": x0, "y0": y0, "x1": x1, "y1": y1,
                 "amp": amp, "freq": freq, "angle": angle}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify dunes parameters."""
+        # Dunes use amp as height, freq as width (inverse)
+        if modifiers.get("taller") or modifiers.get("height_percent"):
+            from ..engine.modification import apply_modifier_to_param
+            apply_modifier_to_param(feat, "amp", modifiers, max_value=0.2)
+        if modifiers.get("wider") or modifiers.get("width_percent"):
+            # For dunes, wider = lower frequency (inverse relationship)
+            current_freq = feat.get("freq", 18.0)
+            if modifiers.get("width_percent"):
+                feat["freq"] = current_freq * (1.0 - modifiers["width_percent"] / 200.0)  # Half effect
+            elif modifiers.get("wider"):
+                feat["freq"] = current_freq * 0.85  # Reduce frequency
     
     def apply_special_effects(self, builder, feat: Dict, stamp: np.ndarray, seed: int):
         """
@@ -687,6 +797,12 @@ class TerracesGenerator(FeatureGenerator):
         return {"type": "terraces", "x0": x0, "y0": y0, "x1": x1, "y1": y1,
                 "levels": levels, "height_per_level": height_per_level,
                 "width_per_level": width_per_level, "direction": direction}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify terraces parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "height_per_level", modifiers, max_value=0.3)
+        apply_modifier_to_param(feat, "width_per_level", modifiers, max_value=50, is_int=True)
 
 
 # ============================================================================
@@ -839,6 +955,24 @@ class FeatureRegistry:
         # Try to create using generator
         feat = generator.create_feature(cx, cy, modifiers, seed)
         return feat  # Returns None if not implemented, which is OK
+    
+    @classmethod
+    def modify_feature(cls, feature_type: str, feat: Dict, modifiers: Dict):
+        """
+        Modify an existing feature using the generator's modify_feature() method.
+        
+        Args:
+            feature_type: Type of feature (e.g., "mountain", "ridge")
+            feat: Existing feature dictionary (modified in-place)
+            modifiers: User modifiers (e.g., {"taller": True, "height_percent": 20})
+        """
+        generator = cls._generators.get(feature_type)
+        if not generator:
+            logger.warning(f"Unknown feature type for modification: '{feature_type}'")
+            return
+        
+        # Call generator's modify method
+        generator.modify_feature(feat, modifiers)
 
 
 # ============================================================================

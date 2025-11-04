@@ -104,7 +104,7 @@ def save_outputs(h, splat, tag, voxel_mode=False, voxel_resolution=256):
             urls["voxel_bin"] = f"/assets/voxel_{tag}.bin"
         
         return urls
-    except Exception as e:
+    except (OSError, IOError, ValueError) as e:
         error_msg = f"Failed to save outputs: {str(e)}"
         logger.error(f"ERROR in save_outputs: {error_msg}", exc_info=True)
         raise IOError(error_msg) from e

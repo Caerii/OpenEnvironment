@@ -218,6 +218,12 @@ def apply_actions(cmd: str, state: Dict, base_biome_fn=None, direct_actions: Lis
     """
     Main orchestrator: Parse command, apply actions, generate terrain.
     
+    This is the main entry point for terrain generation. It coordinates:
+    1. Parsing commands into structured actions
+    2. Managing scene graph state
+    3. Executing actions (remove/modify, then add)
+    4. Building final terrain from all features
+    
     Args:
         cmd: Natural language command string (empty string = rebuild from state only)
         state: Current terrain state dictionary
@@ -227,160 +233,66 @@ def apply_actions(cmd: str, state: Dict, base_biome_fn=None, direct_actions: Lis
     Returns:
         (heightmap, updated_state, splatmap)
     """
+    from .orchestration import (
+        init_scene_graph,
+        parse_command_to_actions,
+        partition_actions,
+        resolve_removal_targets,
+        execute_state_actions,
+        cleanup_scene_graph,
+        execute_add_actions,
+        update_scene_graph_for_additions,
+        build_final_terrain
+    )
+    
     seed = state.get("seed", 0)
     
     # Default to base_desert if no biome function specified
     if base_biome_fn is None:
         base_biome_fn = base_desert
     
-    # Initialize/load scene graph
-    scene_graph = None
-    try:
-        if "semantic_scene" in state:
-            scene_graph = SceneGraphSerializer.from_dict(state["semantic_scene"])
-        else:
-            scene_graph = TerrainSceneGraph()
-            state["semantic_scene"] = SceneGraphSerializer.to_dict(scene_graph)
-    except Exception as e:
-        logger.warning(f"Scene graph initialization failed ({e}), continuing without scene graph")
-        scene_graph = None
+    # Step 1: Initialize scene graph
+    scene_graph = init_scene_graph(state)
     
-    # If direct_actions provided, use them directly (compositional calls)
-    if direct_actions is not None:
-        actions = direct_actions
-    # If empty command, just rebuild from state (no new actions)
-    elif not cmd or not cmd.strip():
-        actions = []
-    else:
-        # Parse command using MCP-enhanced semantic parser or fallback
-        try:
-            parser = SemanticParser()
-            # Pass scene state for context-aware parsing (MCP feature)
-            parsed = parser.parse(cmd, scene_state=state)
-        except Exception as e:
-            logger.warning(f"Semantic parser unavailable ({e}), using regex fallback")
-            parsed = parse_command(cmd)
-        
-        actions = parsed.get("actions", [])
+    # Step 2: Parse command into actions
+    actions = parse_command_to_actions(cmd, state, direct_actions)
     
-    # Initialize state manager
+    # Step 3: Initialize state manager
     feature_state = FeatureState(state)
     
-    # Process remove/modify actions first (they update state)
-    remove_modify_actions = [a for a in actions if a.get("kind") in ("remove", "modify")]
-    add_actions = [a for a in actions if a.get("kind") == "add"]
+    # Step 4: Partition actions into remove/modify vs add
+    remove_modify_actions, add_actions = partition_actions(actions)
     
-    # Track removed feature IDs for cleanup
-    removed_feature_ids = []
+    # Step 5: Resolve removal targets using scene graph
+    removal_ids = resolve_removal_targets(remove_modify_actions, scene_graph, feature_state)
     
-    # Execute remove/modify actions (they modify feature_state)
-    # Use scene graph for reference resolution if available
-    if scene_graph:
-        for action_dict in remove_modify_actions:
-            # Try to resolve target_feature_ids if not provided
-            target_ids = SceneGraphIntegrator.resolve_target_features(scene_graph, action_dict)
-            if target_ids:
-                action_dict["target_feature_ids"] = target_ids
-            
-            # Track feature IDs that will be removed
-            if action_dict.get("kind") == "remove":
-                if target_ids:
-                    removed_feature_ids.extend(target_ids)
-                else:
-                    # If no target_ids, we'll track after removal
-                    feature_type = action_dict.get("type")
-                    if feature_type:
-                        # Get features before removal to track IDs
-                        existing_features = feature_state.list_features()
-                        matching_features = [f for f in existing_features if f.get("type") == feature_type]
-                        if matching_features:
-                            # Track IDs that will be removed (most recent by default)
-                            removed_feature_ids.append(matching_features[-1].get("id"))
+    # Step 6: Execute remove/modify actions
+    actually_removed_ids = execute_state_actions(remove_modify_actions, feature_state, seed)
     
-    # Get feature IDs before removal (for tracking)
-    features_before_removal = feature_state.list_features()
-    feature_ids_before = {f.get("id") for f in features_before_removal if "id" in f}
+    # Step 7: Clean up scene graph for removed features
+    all_removed_ids = list(set(removal_ids) | actually_removed_ids)
+    cleanup_scene_graph(scene_graph, all_removed_ids)
     
-    for action_dict in remove_modify_actions:
-        command = create_command_from_dict(action_dict)
-        command.execute(None, feature_state, seed)  # Builder not needed for state-only operations
-    
-    # Get feature IDs after removal (to determine what was removed)
-    features_after_removal = feature_state.list_features()
-    feature_ids_after = {f.get("id") for f in features_after_removal if "id" in f}
-    
-    # Determine removed feature IDs
-    actually_removed_ids = feature_ids_before - feature_ids_after
-    if actually_removed_ids:
-        removed_feature_ids.extend(list(actually_removed_ids))
-    
-    # Clean up scene graph for removed features
-    if scene_graph and removed_feature_ids:
-        try:
-            SceneGraphIntegrator.cleanup_for_removed_features(
-                scene_graph, list(set(removed_feature_ids))
-            )
-        except Exception as e:
-            logger.warning(f"Scene graph cleanup failed: {e}")
-    
-    # Use TerrainBuilder for single-pass construction
+    # Step 8: Build terrain with existing features (after removals/modifications)
     builder = TerrainBuilder(base_biome_fn, seed)
-    
-    # Apply all existing features (including any modifications)
     for feat in feature_state.list_features():
         _apply_feature_to_builder(builder, feat, seed)
     
-    # Execute add actions (they add features and apply them immediately)
-    # Track feature IDs created for scene graph entity creation
-    created_features_by_action = []
+    # Step 9: Execute add actions (creates and applies new features)
+    created_features = execute_add_actions(add_actions, builder, feature_state, scene_graph, seed, cmd)
     
-    for action_dict in add_actions:
-        # Get feature count before adding
-        features_before = len(feature_state.list_features())
-        
-        command = create_command_from_dict(action_dict)
-        command.execute(builder, feature_state, seed)
-        
-        # Get feature IDs that were created
-        features_after = feature_state.list_features()
-        new_features = features_after[features_before:]
-        
-        if new_features and scene_graph:
-            # Extract feature IDs
-            feature_ids = [f.get("id") for f in new_features if "id" in f]
-            if feature_ids:
-                created_features_by_action.append({
-                    "action": action_dict,
-                    "feature_ids": feature_ids,
-                    "feature_data": new_features,  # Store feature data for spatial queries
-                    "command": cmd
-                })
+    # Step 10: Update scene graph for newly added features
+    update_scene_graph_for_additions(scene_graph, created_features)
     
-    # Create semantic entities for new features
-    if scene_graph and created_features_by_action:
-        for item in created_features_by_action:
-            try:
-                SceneGraphIntegrator.update_scene_graph_for_action(
-                    scene_graph,
-                    item["action"],
-                    item["feature_ids"],
-                    item["command"],
-                    feature_data_list=item.get("feature_data")  # Pass feature data
-                )
-            except Exception as e:
-                logger.warning(f"Failed to create scene graph entity: {e}")
-    
-    # Finalize terrain
+    # Step 11: Finalize terrain
     h, dune_mask_total, cliff_mask_total = builder.finalize()
-    
-    # Generate splatmap
     splat = builder.build_splatmap()
     
     # Save scene graph to state
     if scene_graph:
         try:
             state["semantic_scene"] = SceneGraphSerializer.to_dict(scene_graph)
-        except Exception as e:
+        except (ValueError, AttributeError, TypeError) as e:
             logger.warning(f"Failed to save scene graph: {e}")
     
     # Update state with feature state
@@ -523,160 +435,9 @@ def _generate_bounding_box(cx: int, cy: int, radius: int) -> Tuple[int, int, int
 # Feature Creation
 # ============================================================================
 
-def _create_feature(ftype: str, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
-    """
-    Create a feature dictionary from parameters.
-    
-    Uses FeatureRegistry for defaults, ensuring consistency.
-    Adds subtle, conservative variation when no explicit modifiers are given.
-    Variation is bounded to prevent spikes and maintain smooth Gaussian falloff.
-    
-    NOTE: This function is being phased out - logic is migrating to FeatureRegistry.
-    Tries registry first, falls back to legacy code if not implemented yet.
-    """
-    # Try to create using registry (new architecture)
-    feat = FeatureRegistry.create_feature(ftype, cx, cy, modifiers, seed)
-    if feat is not None:
-        return feat
-    
-    # Fallback to legacy implementation (being phased out)
-    # Get defaults from registry
-    defaults = FeatureRegistry.get_defaults(ftype)
-    
-    # Derive deterministic variation seed from position and global seed
-    variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
-    
-    # Legacy code removed - all feature creation moved to FeatureRegistry
-    return None
-
-def _modify_feature(feat: Dict, modifiers: Dict):
-    """Modify an existing feature's parameters."""
-    ftype = feat.get("type")
-    
-    if ftype in ("hill", "mountain"):
-        if modifiers.get("height_percent"):
-            feat["height"] = min(1.0, feat.get("height", 0.5) * (1.0 + modifiers["height_percent"] / 100.0))
-        elif modifiers.get("taller"):
-            feat["height"] = min(1.0, feat.get("height", 0.5) * 1.3)
-        
-        if modifiers.get("width_percent"):
-            feat["radius"] = int(min(128, feat.get("radius", 48) * (1.0 + modifiers["width_percent"] / 100.0)))
-        elif modifiers.get("wider"):
-            feat["radius"] = int(min(128, feat.get("radius", 48) * 1.3))
-    
-    elif ftype == "valley":
-        if modifiers.get("depth_percent"):
-            feat["depth"] = min(1.0, feat.get("depth", 0.55) * (1.0 + modifiers["depth_percent"] / 100.0))
-        elif modifiers.get("deeper"):
-            feat["depth"] = min(1.0, feat.get("depth", 0.55) * 1.3)
-        
-        if modifiers.get("width_percent"):
-            feat["radius"] = int(min(128, feat.get("radius", 64) * (1.0 + modifiers["width_percent"] / 100.0)))
-        elif modifiers.get("wider"):
-            feat["radius"] = int(min(128, feat.get("radius", 64) * 1.3))
-    
-    elif ftype in ("canyon", "ravine"):
-        if modifiers.get("depth_percent"):
-            feat["depth"] = min(1.0, feat.get("depth", 0.60) * (1.0 + modifiers["depth_percent"] / 100.0))
-        elif modifiers.get("deeper"):
-            feat["depth"] = min(1.0, feat.get("depth", 0.60) * 1.3)
-        
-        if modifiers.get("width_percent"):
-            feat["width"] = int(min(128, feat.get("width", 12) * (1.0 + modifiers["width_percent"] / 100.0)))
-        elif modifiers.get("wider"):
-            feat["width"] = int(min(128, feat.get("width", 12) * 1.3))
-    
-    elif ftype in ("crater", "basin"):
-        if modifiers.get("depth_percent"):
-            feat["depth"] = min(1.0, feat.get("depth", 0.55) * (1.0 + modifiers["depth_percent"] / 100.0))
-        elif modifiers.get("deeper"):
-            feat["depth"] = min(1.0, feat.get("depth", 0.55) * 1.3)
-        
-        if modifiers.get("width_percent"):
-            feat["radius"] = int(min(128, feat.get("radius", 64) * (1.0 + modifiers["width_percent"] / 100.0)))
-        elif modifiers.get("wider"):
-            feat["radius"] = int(min(128, feat.get("radius", 64) * 1.3))
-    
-    elif ftype in ("mesa", "plateau", "cliff", "mound", "pinnacle"):
-        if modifiers.get("height_percent"):
-            feat["height"] = min(1.0, feat.get("height", 0.5) * (1.0 + modifiers["height_percent"] / 100.0))
-        elif modifiers.get("taller"):
-            feat["height"] = min(1.0, feat.get("height", 0.5) * 1.3)
-        
-        if modifiers.get("width_percent"):
-            if "radius" in feat:
-                feat["radius"] = int(min(128, feat.get("radius", 48) * (1.0 + modifiers["width_percent"] / 100.0)))
-            elif "width" in feat:
-                feat["width"] = int(min(128, feat.get("width", 48) * (1.0 + modifiers["width_percent"] / 100.0)))
-                if "length" in feat:  # For plateaus
-                    feat["length"] = int(min(200, feat.get("length", 120) * (1.0 + modifiers["width_percent"] / 100.0)))
-        elif modifiers.get("wider"):
-            if "radius" in feat:
-                feat["radius"] = int(min(128, feat.get("radius", 48) * 1.3))
-            elif "width" in feat:
-                feat["width"] = int(min(128, feat.get("width", 48) * 1.3))
-                if "length" in feat:
-                    feat["length"] = int(min(200, feat.get("length", 120) * 1.3))
-    
-    elif ftype == "volcano":
-        if modifiers.get("height_percent"):
-            feat["height"] = min(1.0, feat.get("height", 0.80) * (1.0 + modifiers["height_percent"] / 100.0))
-        elif modifiers.get("taller"):
-            feat["height"] = min(1.0, feat.get("height", 0.80) * 1.3)
-        
-        if modifiers.get("width_percent"):
-            feat["base_radius"] = int(min(128, feat.get("base_radius", 56) * (1.0 + modifiers["width_percent"] / 100.0)))
-        elif modifiers.get("wider"):
-            feat["base_radius"] = int(min(128, feat.get("base_radius", 56) * 1.3))
-    
-    elif ftype in ("ridge", "spur"):
-        if modifiers.get("height_percent"):
-            if "height" in feat:
-                feat["height"] = min(1.0, feat.get("height", 0.50) * (1.0 + modifiers["height_percent"] / 100.0))
-            elif "base_height" in feat:
-                feat["base_height"] = min(1.0, feat.get("base_height", 0.60) * (1.0 + modifiers["height_percent"] / 100.0))
-        elif modifiers.get("taller"):
-            if "height" in feat:
-                feat["height"] = min(1.0, feat.get("height", 0.50) * 1.3)
-            elif "base_height" in feat:
-                feat["base_height"] = min(1.0, feat.get("base_height", 0.60) * 1.3)
-        
-        if modifiers.get("width_percent"):
-            feat["width"] = int(min(128, feat.get("width", 20) * (1.0 + modifiers["width_percent"] / 100.0)))
-        elif modifiers.get("wider"):
-            feat["width"] = int(min(128, feat.get("width", 20) * 1.3))
-    
-    elif ftype == "pass":
-        if modifiers.get("depth_percent"):
-            feat["depth"] = min(1.0, feat.get("depth", 0.40) * (1.0 + modifiers["depth_percent"] / 100.0))
-        elif modifiers.get("deeper"):
-            feat["depth"] = min(1.0, feat.get("depth", 0.40) * 1.3)
-        
-        if modifiers.get("width_percent"):
-            feat["width"] = int(min(128, feat.get("width", 30) * (1.0 + modifiers["width_percent"] / 100.0)))
-        elif modifiers.get("wider"):
-            feat["width"] = int(min(128, feat.get("width", 30) * 1.3))
-    
-    elif ftype == "terraces":
-        if modifiers.get("height_percent"):
-            feat["height_per_level"] = feat.get("height_per_level", 0.10) * (1.0 + modifiers["height_percent"] / 100.0)
-        elif modifiers.get("taller"):
-            feat["height_per_level"] = feat.get("height_per_level", 0.10) * 1.3
-        
-        if modifiers.get("width_percent"):
-            feat["width_per_level"] = int(feat.get("width_per_level", 20) * (1.0 + modifiers["width_percent"] / 100.0))
-        elif modifiers.get("wider"):
-            feat["width_per_level"] = int(feat.get("width_per_level", 20) * 1.3)
-    
-    elif ftype == "dunes":
-        if modifiers.get("taller"):
-            feat["amp"] = feat.get("amp", 0) * 1.3
-        if modifiers.get("height_percent") is not None:
-            feat["amp"] = feat.get("amp", 0) * (1.0 + modifiers["height_percent"] / 100.0)
-        if modifiers.get("wider"):  # For dunes, wider could mean lower frequency
-            feat["freq"] = feat.get("freq", 0) * 0.7
-        if modifiers.get("width_percent") is not None:
-            feat["freq"] = feat.get("freq", 0) * (1.0 - modifiers["width_percent"] / 100.0)  # Inverse for frequency
+# _create_feature() deleted - all feature creation now in FeatureRegistry
+# _modify_feature() deleted - all feature modification now in FeatureRegistry
+# Use FeatureRegistry.create_feature() and FeatureRegistry.modify_feature() directly
 
 # Export functions for backward compatibility
 def to_png_16bit_gray(h: np.ndarray, path: str):
