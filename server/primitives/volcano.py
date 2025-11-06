@@ -1,6 +1,5 @@
 """Volcano generation primitives - Cone-shaped mountains with optional craters."""
 import numpy as np
-from noise import pnoise2
 from ..utils import clamp01
 from ..engine.config import RES
 
@@ -51,25 +50,19 @@ def generate_volcano(cx: int, cy: int, base_radius: int, height: float,
     
     # Add noise detail for natural variation
     if use_noise:
-        # Multi-octave noise overlay
-        amplitude = 1.0
-        frequency = 0.01
-        persistence = 0.5
-        lacunarity = 2.0
-        octaves = 4
+        # Use fractal_noise utility which handles arrays correctly
+        from ..utils.noise import fractal_noise
         
-        noise_value = 0.0
-        freq = frequency
-        amp = amplitude
-        
-        for _ in range(octaves):
-            noise_value += amp * pnoise2(
-                (xx + seed) * freq,
-                (yy + seed) * freq,
-                octaves=1
-            )
-            freq *= lacunarity
-            amp *= persistence
+        # Generate fractal noise with appropriate scale
+        noise_value = fractal_noise(
+            xx,
+            yy,
+            octaves=4,
+            persistence=0.5,
+            lacunarity=2.0,
+            scale=0.01,  # Frequency scale
+            seed=seed
+        )
         
         # Scale noise based on distance from center
         dist_normalized = np.clip(dist / base_radius, 0.0, 1.0)

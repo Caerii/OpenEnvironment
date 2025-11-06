@@ -214,7 +214,7 @@ def _extract_kind(text: str) -> str:
     else:
         return "add"
 
-def apply_actions(cmd: str, state: Dict, base_biome_fn=None, direct_actions: List[Dict] = None) -> Tuple[np.ndarray, Dict, np.ndarray]:
+def apply_actions(cmd: str, state: Dict, base_biome_fn=None, direct_actions: List[Dict] = None, seed: Optional[int] = None) -> Tuple[np.ndarray, Dict, np.ndarray]:
     """
     Main orchestrator: Parse command, apply actions, generate terrain.
     
@@ -245,7 +245,17 @@ def apply_actions(cmd: str, state: Dict, base_biome_fn=None, direct_actions: Lis
         build_final_terrain
     )
     
-    seed = state.get("seed", 0)
+    import random
+    
+    # Handle seed: -1 = auto-generate, None = use state seed, otherwise use provided seed
+    if seed == -1:
+        seed = random.randint(0, 2**31 - 1)
+    elif seed is None:
+        seed = state.get("seed", -1)
+        if seed == -1:
+            seed = random.randint(0, 2**31 - 1)
+    
+    state["seed"] = seed  # Update state with seed
     
     # Default to base_desert if no biome function specified
     if base_biome_fn is None:

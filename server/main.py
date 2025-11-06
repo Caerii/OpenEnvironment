@@ -1,15 +1,10 @@
-from fastapi import FastAPI, HTTPException
+"""FastAPI application entry point with controller-service architecture."""
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List, Dict
-import os, json, time, traceback, logging
-from PIL import Image
-from .terrain import apply_actions, to_png_16bit_gray, to_png_8bit_gray, to_png_rgba
-from .primitives.base import base_flat
-from .engine.state_lock import atomic_read_state, atomic_write_state
-from .engine.cleanup import cleanup_old_assets, cleanup_temp_files
-from .engine.voxel import heightmap_to_voxels, export_voxels_mesh, export_voxels_binary
+from typing import Optional
+import os
+import logging
 
 # Configure logging
 logging.basicConfig(
@@ -19,6 +14,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Initialize FastAPI app
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -26,193 +22,153 @@ app.add_middleware(
     allow_methods=["*"], allow_headers=["*"],
 )
 
+# Paths configuration
 OUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web", "public", "assets"))
 TEXTURES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "web", "public", "textures"))
-os.makedirs(OUT_DIR, exist_ok=True)
-os.makedirs(TEXTURES_DIR, exist_ok=True)
 STATE_PATH = os.path.join(OUT_DIR, "terrain_state.json")
 
-# Init state using atomic write
-if not os.path.exists(STATE_PATH):
-    atomic_write_state({"features": [], "seed": 0}, STATE_PATH, backup=False)
+# Initialize services
+from .services import (
+    StateService,
+    TextureService,
+    AssetService,
+    TerrainService,
+    TemplateService,
+    MCPService
+)
 
-def create_placeholder_texture(name: str, color: tuple):
-    """Create a solid color placeholder texture (512x512)."""
-    path = os.path.join(TEXTURES_DIR, f"{name}.jpg")
-    if not os.path.exists(path):
-        # Create solid color image (R, G, B)
-        img = Image.new('RGB', (512, 512), color)
-        img.save(path, 'JPEG', quality=85)
-        logger.info(f"Created placeholder texture: {path}")
+state_service = StateService(STATE_PATH)
+texture_service = TextureService(TEXTURES_DIR)
+asset_service = AssetService(OUT_DIR)
+terrain_service = TerrainService(state_service, asset_service)
+template_service = TemplateService(terrain_service)
+mcp_service = MCPService(terrain_service, asset_service, state_service)
 
-def ensure_placeholder_textures():
-    """Ensure all required placeholder textures exist."""
-    textures = {
-        "grass": (76, 175, 80),      # #4CAF50 - bright green
-        "rock": (128, 128, 128),      # #808080 - gray
-        "sand": (210, 180, 140),      # #D2B48C - tan/beige
-        "snow": (255, 255, 255),      # #FFFFFF - white
-    }
-    for name, color in textures.items():
-        create_placeholder_texture(name, color)
+# Initialize controllers
+from .api.controllers import (
+    TerrainController,
+    TemplateController,
+    MCPController,
+    StatusController
+)
 
-# Create placeholder textures on startup
-ensure_placeholder_textures()
+terrain_controller = TerrainController(terrain_service, asset_service)
+template_controller = TemplateController(template_service, asset_service)
+mcp_controller = MCPController(mcp_service)
+status_controller = StatusController()
 
-class Command(BaseModel):
-    text: str = Field(default="", max_length=1000, description="Natural language command for terrain generation")
-    actions: Optional[List[Dict]] = Field(default=None, description="Direct JSON actions array (for compositional calls)")
-    voxel: bool = Field(default=False, description="Generate voxel terrain instead of heightmap")
-    voxel_resolution: int = Field(default=256, ge=128, le=2048, description="Voxel grid resolution (128-2048)")
-    
-    @field_validator('text')
-    @classmethod
-    def validate_text(cls, v):
-        if v is None:
-            return ""
-        return str(v).strip()
+# Import models
+from .api.models import Command
+from typing import Dict
 
-def save_outputs(h, splat, tag, voxel_mode=False, voxel_resolution=256):
-    """Save terrain outputs with error handling."""
-    try:
-        # 16-bit for Unity, 8-bit for web viewer (WebGL commonly samples 8-bit)
-        path_h16 = os.path.join(OUT_DIR, f"height_{tag}_16.png")
-        path_h8  = os.path.join(OUT_DIR, f"height_{tag}_8.png")
-        path_s   = os.path.join(OUT_DIR, f"splat_{tag}.png")
-
-        to_png_16bit_gray(h, path_h16)
-        to_png_8bit_gray(h, path_h8)
-        to_png_rgba(splat, path_s)
-        
-        urls = {
-            "height16": f"/assets/height_{tag}_16.png",
-            "height8":  f"/assets/height_{tag}_8.png",
-            "splat":    f"/assets/splat_{tag}.png"
-        }
-        
-        # Generate voxel data if requested
-        if voxel_mode:
-            logger.info(f"Generating voxel grid with resolution: {voxel_resolution}³ ({voxel_resolution**3:,} voxels)")
-            voxel_grid = heightmap_to_voxels(h, resolution=voxel_resolution, height_scale=50.0)
-            voxel_obj_path = os.path.join(OUT_DIR, f"voxel_{tag}.obj")
-            voxel_bin_path = os.path.join(OUT_DIR, f"voxel_{tag}.bin")
-            
-            export_voxels_mesh(voxel_grid, voxel_obj_path)
-            export_voxels_binary(voxel_grid, voxel_bin_path)
-            
-            urls["voxel_obj"] = f"/assets/voxel_{tag}.obj"
-            urls["voxel_bin"] = f"/assets/voxel_{tag}.bin"
-        
-        return urls
-    except (OSError, IOError, ValueError) as e:
-        error_msg = f"Failed to save outputs: {str(e)}"
-        logger.error(f"ERROR in save_outputs: {error_msg}", exc_info=True)
-        raise IOError(error_msg) from e
+# ============================================================================
+# Terrain Generation Endpoints
+# ============================================================================
 
 @app.post("/api/generate")
-def generate(cmd: Command):
-    """Generate terrain from command with error handling."""
-    try:
-        # Atomic read state
-        state = atomic_read_state(STATE_PATH)
-        
-        # Generate terrain - support both text and direct actions
-        if cmd.actions:
-            # Direct JSON actions (compositional calls)
-            h, state, splat = apply_actions("", state, direct_actions=cmd.actions)
-        else:
-            # Natural language command
-            h, state, splat = apply_actions(cmd.text, state)
-        
-        # Atomic write state
-        atomic_write_state(state, STATE_PATH)
-        
-        # Save outputs
-        tag = str(int(time.time()))
-        urls = save_outputs(h, splat, tag, voxel_mode=cmd.voxel, voxel_resolution=cmd.voxel_resolution)
-        
-        # Periodic cleanup (every 10th generation to avoid overhead)
-        import random
-        if random.randint(1, 10) == 1:
-            cleanup_old_assets(OUT_DIR)
-            cleanup_temp_files(OUT_DIR)
-        
-        return {"ok": True, "state": state, "assets": urls}
-    
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid request: {str(e)}")
-    except Exception as e:
-        error_msg = f"Generation failed: {str(e)}"
-        logger.error(f"ERROR in /api/generate: {error_msg}", exc_info=True)
-        raise HTTPException(status_code=500, detail=error_msg)
+def generate(cmd: Command) -> Dict:
+    """Generate terrain from command."""
+    return terrain_controller.generate(cmd)
 
 @app.post("/api/modify")
-def modify(cmd: Command):
+def modify(cmd: Command) -> Dict:
     """Modify terrain (alias for generate)."""
-    return generate(cmd)
+    return terrain_controller.modify(cmd)
 
 @app.get("/api/state")
-def get_state():
+def get_state() -> Dict:
     """Get current terrain state."""
     try:
-        return atomic_read_state(STATE_PATH)
+        return state_service.get_state()
     except Exception as e:
+        from fastapi import HTTPException
         error_msg = f"Failed to read state: {str(e)}"
         logger.error(f"ERROR in /api/state: {error_msg}", exc_info=True)
         raise HTTPException(status_code=500, detail=error_msg)
 
 @app.post("/api/reset")
-def reset():
-    """Reset terrain to perfectly flat base state."""
-    try:
-        state = {"features": [], "seed": 0}
-        
-        # Create fresh scene graph
-        try:
-            from server.semantic.scene import TerrainSceneGraph, SceneGraphSerializer
-            scene_graph = TerrainSceneGraph()
-            state["semantic_scene"] = SceneGraphSerializer.to_dict(scene_graph)
-        except Exception as e:
-            logger.warning(f"Failed to initialize scene graph: {e}")
-            state["semantic_scene"] = {}
-        
-        # Atomic write state
-        atomic_write_state(state, STATE_PATH)
-        
-        # Generate perfectly flat base terrain
-        h, state, splat = apply_actions("", state, base_biome_fn=base_flat)
-        
-        # Save outputs
-        tag = str(int(time.time()))
-        urls = save_outputs(h, splat, tag, voxel_mode=False)
-        
-        return {"ok": True, "state": state, "assets": urls}
-    
-    except Exception as e:
-        error_msg = f"Reset failed: {str(e)}"
-        logger.error(f"ERROR in /api/reset: {error_msg}", exc_info=True)
-        raise HTTPException(status_code=500, detail=error_msg)
+def reset(cmd: Command = Command()) -> Dict:
+    """Reset terrain to base state."""
+    return terrain_controller.reset(cmd)
 
 @app.post("/api/regenerate")
-def regenerate(cmd: Command = Command(text="", voxel=False, voxel_resolution=256)):
-    """Regenerate terrain from current state (for auto-load on refresh)."""
-    try:
-        # Atomic read state
-        state = atomic_read_state(STATE_PATH)
-        
-        # Regenerate from current state
-        h, state, splat = apply_actions("", state)  # Empty command = rebuild from state
-        
-        # Save outputs (with voxel support)
-        tag = str(int(time.time()))
-        urls = save_outputs(h, splat, tag, voxel_mode=cmd.voxel, voxel_resolution=cmd.voxel_resolution)
-        
-        return {"ok": True, "state": state, "assets": urls}
-    
-    except Exception as e:
-        error_msg = f"Regeneration failed: {str(e)}"
-        logger.error(f"ERROR in /api/regenerate: {error_msg}", exc_info=True)
-        raise HTTPException(status_code=500, detail=error_msg)
+def regenerate(cmd: Command = Command(text="", voxel=False, voxel_resolution=256)) -> Dict:
+    """Regenerate terrain from current state."""
+    return terrain_controller.regenerate(cmd)
+
+
+# ============================================================================
+# Template System
+# ============================================================================
+
+@app.get("/api/templates")
+def list_templates(category: Optional[str] = None, tag: Optional[str] = None) -> Dict:
+    """List all available terrain templates."""
+    return template_controller.list_templates(category, tag)
+
+@app.get("/api/templates/{template_id}")
+def get_template(template_id: str) -> Dict:
+    """Get details for a specific template."""
+    return template_controller.get_template(template_id)
+
+@app.post("/api/templates/{template_id}/apply")
+async def apply_template(template_id: str, cmd: Command = Command()) -> Dict:
+    """Apply a terrain template."""
+    return template_controller.apply_template(template_id, cmd)
+
+
+# ============================================================================
+# MCP (Model Context Protocol) Server Endpoints
+# ============================================================================
+
+@app.get("/api/mcp")
+def mcp_info() -> Dict:
+    """Get MCP server information and capabilities."""
+    return mcp_controller.get_info()
+
+@app.get("/api/mcp/tools")
+def list_mcp_tools(category: Optional[str] = None) -> Dict:
+    """List all available MCP tools."""
+    return mcp_controller.list_tools(category)
+
+
+@app.get("/api/mcp/tools/{tool_name}")
+def get_mcp_tool(tool_name: str) -> Dict:
+    """Get details for a specific MCP tool."""
+    return mcp_controller.get_tool(tool_name)
+
+@app.post("/api/mcp/tools/{tool_name}/call")
+def call_mcp_tool(tool_name: str, arguments: Dict) -> Dict:
+    """Execute an MCP tool with provided arguments."""
+    return mcp_controller.call_tool(tool_name, arguments)
+
+
+@app.get("/api/mcp/resources")
+def list_mcp_resources() -> Dict:
+    """List all available MCP resources."""
+    return mcp_controller.list_resources()
+
+@app.get("/api/mcp/resources/{resource_uri:path}")
+def get_mcp_resource(resource_uri: str) -> Dict:
+    """Get a specific MCP resource."""
+    return mcp_controller.get_resource(resource_uri)
+
+@app.get("/api/mcp/prompts")
+def list_mcp_prompts() -> Dict:
+    """List all available MCP prompts."""
+    return mcp_controller.list_prompts()
+
+@app.get("/api/mcp/prompts/{prompt_name}")
+def get_mcp_prompt(prompt_name: str) -> Dict:
+    """Get a specific MCP prompt template."""
+    return mcp_controller.get_prompt(prompt_name)
+
+
+@app.get("/api/status")
+def get_status() -> Dict:
+    """Get server status including API key availability."""
+    return status_controller.get_status()
+
 
 # Serve the /public/assets folder under /assets
 app.mount("/assets", StaticFiles(directory=OUT_DIR), name="assets")

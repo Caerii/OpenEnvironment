@@ -3,7 +3,8 @@ from typing import Tuple, Optional, List, Dict
 from ..engine.spatial import region_box, random_point_in, random_points_in, clamp_coords
 from ..engine.config import RES
 
-def resolve_position(position_spec: Optional[Dict], existing_features: List[Dict] = None, seed: int = 0) -> Tuple[int, int]:
+def resolve_position(position_spec: Optional[Dict], existing_features: List[Dict] = None, 
+                    constraints = None, seed: int = 0) -> Tuple[int, int]:
     """
     Resolve a position specification to actual coordinates.
     
@@ -41,7 +42,7 @@ def resolve_position(position_spec: Optional[Dict], existing_features: List[Dict
 
 def resolve_multiple_positions(position_spec: Optional[Dict], count: int, 
                                existing_features: List[Dict] = None,
-                               min_distance: int = 20, seed: int = 0) -> List[Tuple[int, int]]:
+                               min_distance: int = 20, constraints = None, seed: int = 0) -> List[Tuple[int, int]]:
     """
     Resolve multiple positions (e.g., "scattered", "three hills").
     

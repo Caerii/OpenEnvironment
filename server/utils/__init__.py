@@ -1,3 +1,4 @@
+"""Utility functions for terrain generation."""
 import numpy as np
 from scipy.ndimage import gaussian_filter
 
@@ -96,3 +97,19 @@ def sobel_slope(h: np.ndarray) -> np.ndarray:
     s = np.sqrt(gx*gx + gy*gy)
     s = s / (s.max() + 1e-8)
     return s
+
+# Re-export noise functions for convenience
+from .noise import fractal_noise
+
+__all__ = [
+    'normalize01',
+    'clamp01',
+    'smooth_mask',
+    'lerp',
+    'smoothstep',
+    'percentiles',
+    'sobel_slope',
+    'fractal_noise'
+]
+
+

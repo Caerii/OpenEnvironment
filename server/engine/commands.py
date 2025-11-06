@@ -56,13 +56,21 @@ class AddFeatureCommand(ActionCommand):
         
         # Resolve positions with deterministic seed
         position_seed = (seed + len(existing_features) * 31) % (2**31)
+        
+        # Get constraint system from builder if available (for walkability zones)
+        constraints = None
+        if builder and hasattr(builder, 'can_place_feature'):
+            constraints = builder._get_walkability_constraints() if hasattr(builder, '_get_walkability_constraints') else None
+        
         if self.count > 1:
             positions = resolve_multiple_positions(
-                self.position, self.count, existing_features, seed=position_seed
+                self.position, self.count, existing_features, 
+                constraints=constraints, seed=position_seed
             )
             logger.info(f"Adding {len(positions)} {self.feature_type}(s) (requested: {self.count})")
         else:
-            pos = resolve_position(self.position, existing_features, seed=position_seed)
+            pos = resolve_position(self.position, existing_features, 
+                                  constraints=constraints, seed=position_seed)
             positions = [pos]
         
         # Ensure we have the correct number of positions
@@ -72,7 +80,46 @@ class AddFeatureCommand(ActionCommand):
         # Create and add features
         for idx, (cx, cy) in enumerate(positions):
             feature_seed = (position_seed + idx * 17) % (2**31)
-            feat = FeatureRegistry.create_feature(self.feature_type, cx, cy, self.modifiers, feature_seed)
+            
+            # Check constraints if available (for non-zone features)
+            if builder and constraints and constraints.has_zones():
+                if self.feature_type not in ["flat_zone", "path", "clearing"]:
+                    # Get feature radius for constraint checking
+                    defaults = FeatureRegistry.get_defaults(self.feature_type)
+                    radius = defaults.get("radius", 50)
+                    
+                    # Check if position is valid
+                    can_place, reason = builder.can_place_feature(self.feature_type, (cx, cy), radius)
+                    if not can_place:
+                        # Find alternative position
+                        cx, cy = builder.find_placement_away_from_zones(
+                            self.feature_type, (cx, cy), radius
+                        )
+            
+            # Special handling for paths (need start/end, not cx/cy)
+            if self.feature_type == "path":
+                # Extract start/end from position dict if available
+                start = self.position.get("start")
+                end = self.position.get("end")
+                if start and end:
+                    # Create path feature with explicit start/end
+                    defaults = FeatureRegistry.get_defaults("path")
+                    feat = {
+                        "type": "path",
+                        "start": tuple(start) if isinstance(start, list) else start,
+                        "end": tuple(end) if isinstance(end, list) else end,
+                        "width": defaults.get("width", 30),
+                        "flatness": defaults.get("flatness", 0.0),
+                        "feather": defaults.get("feather", 8)
+                    }
+                    # Apply modifiers
+                    feat.update(self.modifiers)
+                else:
+                    logger.warning(f"Path requires 'start' and 'end' in position, got {self.position}")
+                    feat = None
+            else:
+                feat = FeatureRegistry.create_feature(self.feature_type, cx, cy, self.modifiers, feature_seed)
+            
             if feat:
                 feature_state.add_feature(feat)
                 # Apply feature immediately to builder
@@ -218,10 +265,11 @@ def _apply_feature_to_builder(builder: TerrainBuilder, feat: Dict, seed: int):
             from ..primitives.dunes import generate_dune_mask
             box = (feat["x0"], feat["y0"], feat["x1"], feat["y1"])
             dune_mask = generate_dune_mask(box)
-            builder.apply_feature(stamp, mode, dune_mask_slice=dune_mask, mask_bounds=box)
+            builder.apply_feature(stamp, mode, dune_mask_slice=dune_mask, mask_bounds=box,
+                                feature_type=ftype, feature_params=feat)
         else:
-            # Apply stamp
-            builder.apply_feature(stamp, mode)
+            # Apply stamp with feature type for constraint tracking
+            builder.apply_feature(stamp, mode, feature_type=ftype, feature_params=feat)
             
             # Apply special effects (masks, etc.) if needed
             FeatureRegistry.apply_special_effects(ftype, builder, feat, stamp, seed)

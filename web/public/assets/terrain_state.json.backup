@@ -2,207 +2,117 @@
   "features": [
     {
       "type": "mountain",
-      "x": 47,
-      "y": 287,
-      "radius": 50,
-      "height": 0.7667949352628904,
+      "x": 209,
+      "y": 267,
+      "radius": 53,
+      "height": 0.9750000000000001,
       "use_noise": true,
       "id": 1
     },
     {
-      "type": "dunes",
-      "x0": 0,
-      "y0": 85,
-      "x1": 188,
-      "y1": 287,
-      "amp": 0.08336691081789263,
-      "freq": 20.590222624013382,
-      "angle": 16.210784276065354,
+      "type": "ridge",
+      "x0": 67,
+      "y0": 0,
+      "x1": 0,
+      "y1": 42,
+      "width": 21,
+      "height": 0.5024181876052456,
+      "steepness": 0.8,
       "id": 2
     },
     {
-      "type": "mountain",
-      "x": 358,
-      "y": 194,
-      "radius": 56,
-      "height": 0.7873324577980272,
-      "use_noise": true,
+      "type": "ridge",
+      "x0": 386,
+      "y0": 28,
+      "x1": 325,
+      "y1": 123,
+      "width": 22,
+      "height": 0.5261879213266136,
+      "steepness": 0.8,
       "id": 3
     },
     {
-      "type": "dunes",
-      "x0": 408,
-      "y0": 164,
-      "x1": 512,
-      "y1": 358,
-      "amp": 0.08794216445788233,
-      "freq": 20.373046051554883,
-      "angle": 17.231330996846502,
+      "type": "mountain",
+      "x": 126,
+      "y": 222,
+      "radius": 56,
+      "height": 0.7517850254057206,
+      "use_noise": true,
       "id": 4
     },
     {
       "type": "mountain",
-      "x": 326,
-      "y": 187,
-      "radius": 53,
-      "height": 0.7500226235834144,
+      "x": 70,
+      "y": 194,
+      "radius": 55,
+      "height": 0.8050710703896924,
       "use_noise": true,
       "id": 5
     },
     {
-      "type": "dunes",
-      "x0": 185,
-      "y0": 215,
-      "x1": 397,
-      "y1": 427,
-      "amp": 0.08285600264370319,
-      "freq": 19.81641624167885,
-      "angle": 17.89396736773299,
+      "type": "mountain",
+      "x": 388,
+      "y": 170,
+      "radius": 51,
+      "height": 0.8010321681130546,
+      "use_noise": true,
       "id": 6
     },
     {
-      "type": "hill",
-      "x": 294,
-      "y": 277,
-      "radius": 42,
-      "height": 0.41974369723667415,
+      "type": "mountain",
+      "x": 498,
+      "y": 282,
+      "radius": 59,
+      "height": 0.7204136521217998,
       "use_noise": true,
       "id": 7
     },
     {
-      "type": "hill",
-      "x": 316,
-      "y": 230,
-      "radius": 38,
-      "height": 0.43499415716050566,
-      "use_noise": true,
+      "type": "valley",
+      "x": 230,
+      "y": 329,
+      "radius": 60,
+      "depth": 0.5915976910629948,
       "id": 8
     },
     {
-      "type": "hill",
-      "x": 259,
-      "y": 277,
-      "radius": 39,
-      "height": 0.48060897545325953,
+      "type": "mountain",
+      "x": 3,
+      "y": 237,
+      "radius": 52,
+      "height": 0.768241752365296,
       "use_noise": true,
       "id": 9
     },
     {
-      "type": "hill",
-      "x": 307,
-      "y": 289,
-      "radius": 42,
-      "height": 0.4752031253889009,
+      "type": "mountain",
+      "x": 145,
+      "y": 330,
+      "radius": 55,
+      "height": 0.747805714459187,
       "use_noise": true,
       "id": 10
     },
     {
-      "type": "hill",
-      "x": 331,
-      "y": 178,
-      "radius": 47,
-      "height": 0.4747649293658296,
+      "type": "mountain",
+      "x": 144,
+      "y": 323,
+      "radius": 53,
+      "height": 0.7512400447094107,
       "use_noise": true,
       "id": 11
     },
     {
-      "type": "hill",
-      "x": 264,
-      "y": 333,
-      "radius": 42,
-      "height": 0.421150944492236,
+      "type": "mountain",
+      "x": 38,
+      "y": 215,
+      "radius": 53,
+      "height": 0.7975982741282562,
       "use_noise": true,
       "id": 12
-    },
-    {
-      "type": "dunes",
-      "x0": 52,
-      "y0": 125,
-      "x1": 230,
-      "y1": 303,
-      "amp": 0.0798805331511776,
-      "freq": 17.54973196804196,
-      "angle": 16.12191065506095,
-      "id": 13
-    },
-    {
-      "type": "mountain",
-      "x": 119,
-      "y": 250,
-      "radius": 62,
-      "height": 0.6955697737405446,
-      "use_noise": true,
-      "id": 14
-    },
-    {
-      "type": "mountain",
-      "x": 72,
-      "y": 304,
-      "radius": 51,
-      "height": 0.716037722402057,
-      "use_noise": true,
-      "id": 15
-    },
-    {
-      "type": "dunes",
-      "x0": 0,
-      "y0": 201,
-      "x1": 197,
-      "y1": 417,
-      "amp": 0.08159070783181513,
-      "freq": 19.933509631893045,
-      "angle": 21.046347961307234,
-      "id": 16
-    },
-    {
-      "type": "mountain",
-      "x": 60,
-      "y": 209,
-      "radius": 51,
-      "height": 0.7910082593658114,
-      "use_noise": true,
-      "id": 17
-    },
-    {
-      "type": "mountain",
-      "x": 148,
-      "y": 263,
-      "radius": 52,
-      "height": 0.7267689470090475,
-      "use_noise": true,
-      "id": 18
-    },
-    {
-      "type": "dunes",
-      "x0": 0,
-      "y0": 209,
-      "x1": 214,
-      "y1": 427,
-      "amp": 0.08761310197541121,
-      "freq": 18.1609370475184,
-      "angle": 17.441362406750265,
-      "id": 19
-    },
-    {
-      "type": "mountain",
-      "x": 22,
-      "y": 190,
-      "radius": 56,
-      "height": 0.7095645087761835,
-      "use_noise": true,
-      "id": 20
-    },
-    {
-      "type": "mountain",
-      "x": 133,
-      "y": 304,
-      "radius": 55,
-      "height": 0.7106109418176041,
-      "use_noise": true,
-      "id": 21
     }
   ],
-  "seed": 0,
+  "seed": -1,
   "semantic_scene": {
     "version": 1,
     "root": {
@@ -232,44 +142,44 @@
                     "type": "mountain",
                     "feature": {
                       "type": "mountain",
-                      "x": 47,
-                      "y": 287,
-                      "radius": 50,
-                      "height": 0.7667949352628904,
+                      "x": 209,
+                      "y": 267,
+                      "radius": 53,
+                      "height": 0.9750000000000001,
                       "use_noise": true,
                       "id": 1
                     },
-                    "x": 47,
-                    "y": 287,
-                    "radius": 50,
-                    "height": 0.7667949352628904
+                    "x": 209,
+                    "y": 267,
+                    "radius": 53,
+                    "height": 0.9750000000000001
                   },
                   "feature_ids": [
                     1
                   ],
                   "children": {}
                 },
-                "feature_3": {
-                  "path": "/World/Features/Mountain_Group/feature_3",
-                  "name": "feature_3",
+                "feature_4": {
+                  "path": "/World/Features/Mountain_Group/feature_4",
+                  "name": "feature_4",
                   "data": {
                     "type": "mountain",
                     "feature": {
                       "type": "mountain",
-                      "x": 358,
-                      "y": 194,
+                      "x": 126,
+                      "y": 222,
                       "radius": 56,
-                      "height": 0.7873324577980272,
+                      "height": 0.7517850254057206,
                       "use_noise": true,
-                      "id": 3
+                      "id": 4
                     },
-                    "x": 358,
-                    "y": 194,
+                    "x": 126,
+                    "y": 222,
                     "radius": 56,
-                    "height": 0.7873324577980272
+                    "height": 0.7517850254057206
                   },
                   "feature_ids": [
-                    3
+                    4
                   ],
                   "children": {}
                 },
@@ -280,196 +190,89 @@
                     "type": "mountain",
                     "feature": {
                       "type": "mountain",
-                      "x": 326,
-                      "y": 187,
-                      "radius": 53,
-                      "height": 0.7500226235834144,
+                      "x": 70,
+                      "y": 194,
+                      "radius": 55,
+                      "height": 0.8050710703896924,
                       "use_noise": true,
                       "id": 5
                     },
-                    "x": 326,
-                    "y": 187,
-                    "radius": 53,
-                    "height": 0.7500226235834144
+                    "x": 70,
+                    "y": 194,
+                    "radius": 55,
+                    "height": 0.8050710703896924
                   },
                   "feature_ids": [
                     5
                   ],
                   "children": {}
-                }
-              }
-            },
-            "Dunes_Group": {
-              "path": "/World/Features/Dunes_Group",
-              "name": "Dunes_Group",
-              "data": {
-                "semantic_label": "the dunes"
-              },
-              "feature_ids": [],
-              "children": {
-                "feature_2": {
-                  "path": "/World/Features/Dunes_Group/feature_2",
-                  "name": "feature_2",
-                  "data": {
-                    "type": "dunes",
-                    "feature": {
-                      "type": "dunes",
-                      "x0": 0,
-                      "y0": 85,
-                      "x1": 188,
-                      "y1": 287,
-                      "amp": 0.08336691081789263,
-                      "freq": 20.590222624013382,
-                      "angle": 16.210784276065354,
-                      "id": 2
-                    },
-                    "x0": 0,
-                    "y0": 85,
-                    "x1": 188,
-                    "y1": 287,
-                    "amp": 0.08336691081789263,
-                    "freq": 20.590222624013382,
-                    "angle": 16.210784276065354
-                  },
-                  "feature_ids": [
-                    2
-                  ],
-                  "children": {}
-                },
-                "feature_4": {
-                  "path": "/World/Features/Dunes_Group/feature_4",
-                  "name": "feature_4",
-                  "data": {
-                    "type": "dunes",
-                    "feature": {
-                      "type": "dunes",
-                      "x0": 408,
-                      "y0": 164,
-                      "x1": 512,
-                      "y1": 358,
-                      "amp": 0.08794216445788233,
-                      "freq": 20.373046051554883,
-                      "angle": 17.231330996846502,
-                      "id": 4
-                    },
-                    "x0": 408,
-                    "y0": 164,
-                    "x1": 512,
-                    "y1": 358,
-                    "amp": 0.08794216445788233,
-                    "freq": 20.373046051554883,
-                    "angle": 17.231330996846502
-                  },
-                  "feature_ids": [
-                    4
-                  ],
-                  "children": {}
                 },
                 "feature_6": {
-                  "path": "/World/Features/Dunes_Group/feature_6",
+                  "path": "/World/Features/Mountain_Group/feature_6",
                   "name": "feature_6",
                   "data": {
-                    "type": "dunes",
+                    "type": "mountain",
                     "feature": {
-                      "type": "dunes",
-                      "x0": 185,
-                      "y0": 215,
-                      "x1": 397,
-                      "y1": 427,
-                      "amp": 0.08285600264370319,
-                      "freq": 19.81641624167885,
-                      "angle": 17.89396736773299,
+                      "type": "mountain",
+                      "x": 388,
+                      "y": 170,
+                      "radius": 51,
+                      "height": 0.8010321681130546,
+                      "use_noise": true,
                       "id": 6
                     },
-                    "x0": 185,
-                    "y0": 215,
-                    "x1": 397,
-                    "y1": 427,
-                    "amp": 0.08285600264370319,
-                    "freq": 19.81641624167885,
-                    "angle": 17.89396736773299
+                    "x": 388,
+                    "y": 170,
+                    "radius": 51,
+                    "height": 0.8010321681130546
                   },
                   "feature_ids": [
                     6
                   ],
                   "children": {}
-                }
-              }
-            },
-            "Hill_Group": {
-              "path": "/World/Features/Hill_Group",
-              "name": "Hill_Group",
-              "data": {
-                "semantic_label": "the hills"
-              },
-              "feature_ids": [],
-              "children": {
+                },
                 "feature_7": {
-                  "path": "/World/Features/Hill_Group/feature_7",
+                  "path": "/World/Features/Mountain_Group/feature_7",
                   "name": "feature_7",
                   "data": {
-                    "type": "hill",
+                    "type": "mountain",
                     "feature": {
-                      "type": "hill",
-                      "x": 294,
-                      "y": 277,
-                      "radius": 42,
-                      "height": 0.41974369723667415,
+                      "type": "mountain",
+                      "x": 498,
+                      "y": 282,
+                      "radius": 59,
+                      "height": 0.7204136521217998,
                       "use_noise": true,
                       "id": 7
                     },
-                    "x": 294,
-                    "y": 277,
-                    "radius": 42,
-                    "height": 0.41974369723667415
+                    "x": 498,
+                    "y": 282,
+                    "radius": 59,
+                    "height": 0.7204136521217998
                   },
                   "feature_ids": [
                     7
                   ],
                   "children": {}
                 },
-                "feature_8": {
-                  "path": "/World/Features/Hill_Group/feature_8",
-                  "name": "feature_8",
-                  "data": {
-                    "type": "hill",
-                    "feature": {
-                      "type": "hill",
-                      "x": 316,
-                      "y": 230,
-                      "radius": 38,
-                      "height": 0.43499415716050566,
-                      "use_noise": true,
-                      "id": 8
-                    },
-                    "x": 316,
-                    "y": 230,
-                    "radius": 38,
-                    "height": 0.43499415716050566
-                  },
-                  "feature_ids": [
-                    8
-                  ],
-                  "children": {}
-                },
                 "feature_9": {
-                  "path": "/World/Features/Hill_Group/feature_9",
+                  "path": "/World/Features/Mountain_Group/feature_9",
                   "name": "feature_9",
                   "data": {
-                    "type": "hill",
+                    "type": "mountain",
                     "feature": {
-                      "type": "hill",
-                      "x": 259,
-                      "y": 277,
-                      "radius": 39,
-                      "height": 0.48060897545325953,
+                      "type": "mountain",
+                      "x": 3,
+                      "y": 237,
+                      "radius": 52,
+                      "height": 0.768241752365296,
                       "use_noise": true,
                       "id": 9
                     },
-                    "x": 259,
-                    "y": 277,
-                    "radius": 39,
-                    "height": 0.48060897545325953
+                    "x": 3,
+                    "y": 237,
+                    "radius": 52,
+                    "height": 0.768241752365296
                   },
                   "feature_ids": [
                     9
@@ -477,23 +280,23 @@
                   "children": {}
                 },
                 "feature_10": {
-                  "path": "/World/Features/Hill_Group/feature_10",
+                  "path": "/World/Features/Mountain_Group/feature_10",
                   "name": "feature_10",
                   "data": {
-                    "type": "hill",
+                    "type": "mountain",
                     "feature": {
-                      "type": "hill",
-                      "x": 307,
-                      "y": 289,
-                      "radius": 42,
-                      "height": 0.4752031253889009,
+                      "type": "mountain",
+                      "x": 145,
+                      "y": 330,
+                      "radius": 55,
+                      "height": 0.747805714459187,
                       "use_noise": true,
                       "id": 10
                     },
-                    "x": 307,
-                    "y": 289,
-                    "radius": 42,
-                    "height": 0.4752031253889009
+                    "x": 145,
+                    "y": 330,
+                    "radius": 55,
+                    "height": 0.747805714459187
                   },
                   "feature_ids": [
                     10
@@ -501,23 +304,23 @@
                   "children": {}
                 },
                 "feature_11": {
-                  "path": "/World/Features/Hill_Group/feature_11",
+                  "path": "/World/Features/Mountain_Group/feature_11",
                   "name": "feature_11",
                   "data": {
-                    "type": "hill",
+                    "type": "mountain",
                     "feature": {
-                      "type": "hill",
-                      "x": 331,
-                      "y": 178,
-                      "radius": 47,
-                      "height": 0.4747649293658296,
+                      "type": "mountain",
+                      "x": 144,
+                      "y": 323,
+                      "radius": 53,
+                      "height": 0.7512400447094107,
                       "use_noise": true,
                       "id": 11
                     },
-                    "x": 331,
-                    "y": 178,
-                    "radius": 47,
-                    "height": 0.4747649293658296
+                    "x": 144,
+                    "y": 323,
+                    "radius": 53,
+                    "height": 0.7512400447094107
                   },
                   "feature_ids": [
                     11
@@ -525,26 +328,127 @@
                   "children": {}
                 },
                 "feature_12": {
-                  "path": "/World/Features/Hill_Group/feature_12",
+                  "path": "/World/Features/Mountain_Group/feature_12",
                   "name": "feature_12",
                   "data": {
-                    "type": "hill",
+                    "type": "mountain",
                     "feature": {
-                      "type": "hill",
-                      "x": 264,
-                      "y": 333,
-                      "radius": 42,
-                      "height": 0.421150944492236,
+                      "type": "mountain",
+                      "x": 38,
+                      "y": 215,
+                      "radius": 53,
+                      "height": 0.7975982741282562,
                       "use_noise": true,
                       "id": 12
                     },
-                    "x": 264,
-                    "y": 333,
-                    "radius": 42,
-                    "height": 0.421150944492236
+                    "x": 38,
+                    "y": 215,
+                    "radius": 53,
+                    "height": 0.7975982741282562
                   },
                   "feature_ids": [
                     12
+                  ],
+                  "children": {}
+                }
+              }
+            },
+            "Ridge_Group": {
+              "path": "/World/Features/Ridge_Group",
+              "name": "Ridge_Group",
+              "data": {
+                "semantic_label": "the ridges"
+              },
+              "feature_ids": [],
+              "children": {
+                "feature_2": {
+                  "path": "/World/Features/Ridge_Group/feature_2",
+                  "name": "feature_2",
+                  "data": {
+                    "type": "ridge",
+                    "feature": {
+                      "type": "ridge",
+                      "x0": 67,
+                      "y0": 0,
+                      "x1": 0,
+                      "y1": 42,
+                      "width": 21,
+                      "height": 0.5024181876052456,
+                      "steepness": 0.8,
+                      "id": 2
+                    },
+                    "x0": 67,
+                    "y0": 0,
+                    "x1": 0,
+                    "y1": 42,
+                    "height": 0.5024181876052456,
+                    "width": 21,
+                    "steepness": 0.8
+                  },
+                  "feature_ids": [
+                    2
+                  ],
+                  "children": {}
+                },
+                "feature_3": {
+                  "path": "/World/Features/Ridge_Group/feature_3",
+                  "name": "feature_3",
+                  "data": {
+                    "type": "ridge",
+                    "feature": {
+                      "type": "ridge",
+                      "x0": 386,
+                      "y0": 28,
+                      "x1": 325,
+                      "y1": 123,
+                      "width": 22,
+                      "height": 0.5261879213266136,
+                      "steepness": 0.8,
+                      "id": 3
+                    },
+                    "x0": 386,
+                    "y0": 28,
+                    "x1": 325,
+                    "y1": 123,
+                    "height": 0.5261879213266136,
+                    "width": 22,
+                    "steepness": 0.8
+                  },
+                  "feature_ids": [
+                    3
+                  ],
+                  "children": {}
+                }
+              }
+            },
+            "Valley_Group": {
+              "path": "/World/Features/Valley_Group",
+              "name": "Valley_Group",
+              "data": {
+                "semantic_label": "the valleys"
+              },
+              "feature_ids": [],
+              "children": {
+                "feature_8": {
+                  "path": "/World/Features/Valley_Group/feature_8",
+                  "name": "feature_8",
+                  "data": {
+                    "type": "valley",
+                    "feature": {
+                      "type": "valley",
+                      "x": 230,
+                      "y": 329,
+                      "radius": 60,
+                      "depth": 0.5915976910629948,
+                      "id": 8
+                    },
+                    "x": 230,
+                    "y": 329,
+                    "radius": 60,
+                    "depth": 0.5915976910629948
+                  },
+                  "feature_ids": [
+                    8
                   ],
                   "children": {}
                 }
@@ -566,19 +470,21 @@
                 "type": "feature",
                 "label": "the mountains",
                 "keywords": [
+                  "peak",
                   "mountains",
                   "peaks",
                   "mountain",
-                  "summit",
-                  "peak"
+                  "tall",
+                  "small",
+                  "summit"
                 ],
-                "description": "1 mountain in the left",
+                "description": "1 mountain in the center",
                 "feature_refs": [
                   1
                 ],
                 "metadata": {},
-                "created_at": 1762211171.0723023,
-                "user_intent": "add a mountain and sand dunes on the left",
+                "created_at": 1762391178.516053,
+                "user_intent": "create a desert biome. add a tall mountain in the center. add a ridge extending from the mountain to the top-left. add a ridge extending from the mountain to the top-right. add two smaller peaks on the left. add two smaller peaks on the right. add a valley in the bottom-center",
                 "relationship_ids": []
               },
               "feature_ids": [
@@ -586,32 +492,154 @@
               ],
               "children": {}
             },
-            "dunes_1": {
-              "path": "/World/Semantics/dunes_1",
-              "name": "dunes_1",
+            "ridge_1": {
+              "path": "/World/Semantics/ridge_1",
+              "name": "ridge_1",
               "data": {
-                "id": "dunes_1",
+                "id": "ridge_1",
                 "type": "feature",
-                "label": "the dunes",
+                "label": "the ridges",
                 "keywords": [
-                  "sand",
-                  "desert",
-                  "dune",
-                  "arid",
-                  "dunes",
-                  "sandy"
+                  "spine",
+                  "tall",
+                  "ridges",
+                  "small",
+                  "ridge",
+                  "crest"
                 ],
-                "description": "1 dunes in the left",
+                "description": "1 ridge in the top-left",
                 "feature_refs": [
                   2
                 ],
                 "metadata": {},
-                "created_at": 1762211171.0723023,
-                "user_intent": "add a mountain and sand dunes on the left",
+                "created_at": 1762391178.516053,
+                "user_intent": "create a desert biome. add a tall mountain in the center. add a ridge extending from the mountain to the top-left. add a ridge extending from the mountain to the top-right. add two smaller peaks on the left. add two smaller peaks on the right. add a valley in the bottom-center",
                 "relationship_ids": []
               },
               "feature_ids": [
                 2
+              ],
+              "children": {}
+            },
+            "ridge_1_1": {
+              "path": "/World/Semantics/ridge_1_1",
+              "name": "ridge_1_1",
+              "data": {
+                "id": "ridge_1_1",
+                "type": "feature",
+                "label": "the ridges",
+                "keywords": [
+                  "spine",
+                  "tall",
+                  "ridges",
+                  "small",
+                  "ridge",
+                  "crest"
+                ],
+                "description": "1 ridge in the top-right",
+                "feature_refs": [
+                  3
+                ],
+                "metadata": {},
+                "created_at": 1762391178.5170538,
+                "user_intent": "create a desert biome. add a tall mountain in the center. add a ridge extending from the mountain to the top-left. add a ridge extending from the mountain to the top-right. add two smaller peaks on the left. add two smaller peaks on the right. add a valley in the bottom-center",
+                "relationship_ids": []
+              },
+              "feature_ids": [
+                3
+              ],
+              "children": {}
+            },
+            "mountain_2": {
+              "path": "/World/Semantics/mountain_2",
+              "name": "mountain_2",
+              "data": {
+                "id": "mountain_2",
+                "type": "group",
+                "label": "two mountains",
+                "keywords": [
+                  "peak",
+                  "mountains",
+                  "peaks",
+                  "mountain",
+                  "tall",
+                  "small",
+                  "summit"
+                ],
+                "description": "2 mountains in the left",
+                "feature_refs": [
+                  4,
+                  5
+                ],
+                "metadata": {},
+                "created_at": 1762391178.5170538,
+                "user_intent": "create a desert biome. add a tall mountain in the center. add a ridge extending from the mountain to the top-left. add a ridge extending from the mountain to the top-right. add two smaller peaks on the left. add two smaller peaks on the right. add a valley in the bottom-center",
+                "relationship_ids": []
+              },
+              "feature_ids": [
+                4,
+                5
+              ],
+              "children": {}
+            },
+            "mountain_2_1": {
+              "path": "/World/Semantics/mountain_2_1",
+              "name": "mountain_2_1",
+              "data": {
+                "id": "mountain_2_1",
+                "type": "group",
+                "label": "two mountains",
+                "keywords": [
+                  "peak",
+                  "mountains",
+                  "peaks",
+                  "mountain",
+                  "tall",
+                  "small",
+                  "summit"
+                ],
+                "description": "2 mountains in the right",
+                "feature_refs": [
+                  6,
+                  7
+                ],
+                "metadata": {},
+                "created_at": 1762391178.5170538,
+                "user_intent": "create a desert biome. add a tall mountain in the center. add a ridge extending from the mountain to the top-left. add a ridge extending from the mountain to the top-right. add two smaller peaks on the left. add two smaller peaks on the right. add a valley in the bottom-center",
+                "relationship_ids": []
+              },
+              "feature_ids": [
+                6,
+                7
+              ],
+              "children": {}
+            },
+            "valley_1": {
+              "path": "/World/Semantics/valley_1",
+              "name": "valley_1",
+              "data": {
+                "id": "valley_1",
+                "type": "feature",
+                "label": "the valleys",
+                "keywords": [
+                  "valley",
+                  "tall",
+                  "small",
+                  "depression",
+                  "hollow",
+                  "valleys"
+                ],
+                "description": "1 valley in the bottom-center",
+                "feature_refs": [
+                  8
+                ],
+                "metadata": {},
+                "created_at": 1762391178.5170538,
+                "user_intent": "create a desert biome. add a tall mountain in the center. add a ridge extending from the mountain to the top-left. add a ridge extending from the mountain to the top-right. add two smaller peaks on the left. add two smaller peaks on the right. add a valley in the bottom-center",
+                "relationship_ids": []
+              },
+              "feature_ids": [
+                8
               ],
               "children": {}
             },
@@ -623,52 +651,23 @@
                 "type": "feature",
                 "label": "the mountains",
                 "keywords": [
+                  "peak",
                   "mountains",
                   "peaks",
                   "mountain",
-                  "summit",
-                  "peak"
+                  "summit"
                 ],
-                "description": "1 mountain in the right",
+                "description": "1 mountain in the left",
                 "feature_refs": [
-                  3
+                  9
                 ],
                 "metadata": {},
-                "created_at": 1762211183.758228,
-                "user_intent": "add a mountain and sand dunes on the right",
+                "created_at": 1762391198.818649,
+                "user_intent": "add a mountain on the left",
                 "relationship_ids": []
               },
               "feature_ids": [
-                3
-              ],
-              "children": {}
-            },
-            "dunes_1_1": {
-              "path": "/World/Semantics/dunes_1_1",
-              "name": "dunes_1_1",
-              "data": {
-                "id": "dunes_1_1",
-                "type": "feature",
-                "label": "the dunes",
-                "keywords": [
-                  "sand",
-                  "desert",
-                  "dune",
-                  "arid",
-                  "dunes",
-                  "sandy"
-                ],
-                "description": "1 dunes in the right",
-                "feature_refs": [
-                  4
-                ],
-                "metadata": {},
-                "created_at": 1762211183.7595522,
-                "user_intent": "add a mountain and sand dunes on the right",
-                "relationship_ids": []
-              },
-              "feature_ids": [
-                4
+                9
               ],
               "children": {}
             },
@@ -680,115 +679,78 @@
                 "type": "feature",
                 "label": "the mountains",
                 "keywords": [
+                  "peak",
                   "mountains",
                   "peaks",
                   "mountain",
-                  "summit",
-                  "peak"
+                  "summit"
                 ],
-                "description": "1 mountain in the middle",
+                "description": "1 mountain in the left",
                 "feature_refs": [
-                  5
+                  10
                 ],
                 "metadata": {},
-                "created_at": 1762211198.7659404,
-                "user_intent": "add a mountain and sand dunes on the middle",
+                "created_at": 1762391203.6689951,
+                "user_intent": "add a mountain on the left",
                 "relationship_ids": []
               },
               "feature_ids": [
-                5
+                10
               ],
               "children": {}
             },
-            "dunes_1_2": {
-              "path": "/World/Semantics/dunes_1_2",
-              "name": "dunes_1_2",
+            "mountain_1_3": {
+              "path": "/World/Semantics/mountain_1_3",
+              "name": "mountain_1_3",
               "data": {
-                "id": "dunes_1_2",
+                "id": "mountain_1_3",
                 "type": "feature",
-                "label": "the dunes",
+                "label": "the mountains",
                 "keywords": [
-                  "sand",
-                  "desert",
-                  "dune",
-                  "arid",
-                  "dunes",
-                  "sandy"
+                  "peak",
+                  "mountains",
+                  "peaks",
+                  "mountain",
+                  "summit"
                 ],
-                "description": "1 dunes in the middle",
+                "description": "1 mountain in the left",
                 "feature_refs": [
-                  6
+                  11
                 ],
                 "metadata": {},
-                "created_at": 1762211198.7659404,
-                "user_intent": "add a mountain and sand dunes on the middle",
+                "created_at": 1762391208.1135786,
+                "user_intent": "add a mountain on the left",
                 "relationship_ids": []
               },
               "feature_ids": [
-                6
+                11
               ],
               "children": {}
             },
-            "hill_1": {
-              "path": "/World/Semantics/hill_1",
-              "name": "hill_1",
+            "mountain_1_4": {
+              "path": "/World/Semantics/mountain_1_4",
+              "name": "mountain_1_4",
               "data": {
-                "id": "hill_1",
+                "id": "mountain_1_4",
                 "type": "feature",
-                "label": "the hills",
+                "label": "the mountains",
                 "keywords": [
-                  "mound",
-                  "rolling",
-                  "rise",
-                  "hills",
-                  "hill"
+                  "peak",
+                  "mountains",
+                  "peaks",
+                  "mountain",
+                  "summit"
                 ],
-                "description": "1 hill in the center",
+                "description": "1 mountain in the left",
                 "feature_refs": [
-                  7
-                ],
-                "metadata": {},
-                "created_at": 1762211207.5676394,
-                "user_intent": "add some rolling hills to the scene",
-                "relationship_ids": []
-              },
-              "feature_ids": [
-                7
-              ],
-              "children": {}
-            },
-            "hill_5": {
-              "path": "/World/Semantics/hill_5",
-              "name": "hill_5",
-              "data": {
-                "id": "hill_5",
-                "type": "group",
-                "label": "five hills",
-                "keywords": [
-                  "mound",
-                  "rolling",
-                  "rise",
-                  "hills",
-                  "hill"
-                ],
-                "description": "5 hills in the center",
-                "feature_refs": [
-                  8,
-                  9,
-                  10,
-                  11,
                   12
                 ],
                 "metadata": {},
-                "created_at": 1762211228.721371,
-                "user_intent": "add 5 rolling hills to the scene",
+                "created_at": 1762391212.3002532,
+                "user_intent": "add a mountain on the left",
                 "relationship_ids": []
               },
               "feature_ids": [
-                8,
-                9,
-                10,
-                11,
                 12
               ],
               "children": {}
@@ -803,40 +765,130 @@
         "type": "feature",
         "label": "the mountains",
         "keywords": [
+          "peak",
           "mountains",
           "peaks",
           "mountain",
-          "summit",
-          "peak"
+          "tall",
+          "small",
+          "summit"
         ],
-        "description": "1 mountain in the left",
+        "description": "1 mountain in the center",
         "feature_refs": [
           1
         ],
         "metadata": {},
-        "created_at": 1762211171.0723023,
-        "user_intent": "add a mountain and sand dunes on the left",
+        "created_at": 1762391178.516053,
+        "user_intent": "create a desert biome. add a tall mountain in the center. add a ridge extending from the mountain to the top-left. add a ridge extending from the mountain to the top-right. add two smaller peaks on the left. add two smaller peaks on the right. add a valley in the bottom-center",
         "relationship_ids": []
       },
       {
-        "id": "dunes_1",
+        "id": "ridge_1",
         "type": "feature",
-        "label": "the dunes",
+        "label": "the ridges",
         "keywords": [
-          "sand",
-          "desert",
-          "dune",
-          "arid",
-          "dunes",
-          "sandy"
+          "spine",
+          "tall",
+          "ridges",
+          "small",
+          "ridge",
+          "crest"
         ],
-        "description": "1 dunes in the left",
+        "description": "1 ridge in the top-left",
         "feature_refs": [
           2
         ],
         "metadata": {},
-        "created_at": 1762211171.0723023,
-        "user_intent": "add a mountain and sand dunes on the left",
+        "created_at": 1762391178.516053,
+        "user_intent": "create a desert biome. add a tall mountain in the center. add a ridge extending from the mountain to the top-left. add a ridge extending from the mountain to the top-right. add two smaller peaks on the left. add two smaller peaks on the right. add a valley in the bottom-center",
+        "relationship_ids": []
+      },
+      {
+        "id": "ridge_1_1",
+        "type": "feature",
+        "label": "the ridges",
+        "keywords": [
+          "spine",
+          "tall",
+          "ridges",
+          "small",
+          "ridge",
+          "crest"
+        ],
+        "description": "1 ridge in the top-right",
+        "feature_refs": [
+          3
+        ],
+        "metadata": {},
+        "created_at": 1762391178.5170538,
+        "user_intent": "create a desert biome. add a tall mountain in the center. add a ridge extending from the mountain to the top-left. add a ridge extending from the mountain to the top-right. add two smaller peaks on the left. add two smaller peaks on the right. add a valley in the bottom-center",
+        "relationship_ids": []
+      },
+      {
+        "id": "mountain_2",
+        "type": "group",
+        "label": "two mountains",
+        "keywords": [
+          "peak",
+          "mountains",
+          "peaks",
+          "mountain",
+          "tall",
+          "small",
+          "summit"
+        ],
+        "description": "2 mountains in the left",
+        "feature_refs": [
+          4,
+          5
+        ],
+        "metadata": {},
+        "created_at": 1762391178.5170538,
+        "user_intent": "create a desert biome. add a tall mountain in the center. add a ridge extending from the mountain to the top-left. add a ridge extending from the mountain to the top-right. add two smaller peaks on the left. add two smaller peaks on the right. add a valley in the bottom-center",
+        "relationship_ids": []
+      },
+      {
+        "id": "mountain_2_1",
+        "type": "group",
+        "label": "two mountains",
+        "keywords": [
+          "peak",
+          "mountains",
+          "peaks",
+          "mountain",
+          "tall",
+          "small",
+          "summit"
+        ],
+        "description": "2 mountains in the right",
+        "feature_refs": [
+          6,
+          7
+        ],
+        "metadata": {},
+        "created_at": 1762391178.5170538,
+        "user_intent": "create a desert biome. add a tall mountain in the center. add a ridge extending from the mountain to the top-left. add a ridge extending from the mountain to the top-right. add two smaller peaks on the left. add two smaller peaks on the right. add a valley in the bottom-center",
+        "relationship_ids": []
+      },
+      {
+        "id": "valley_1",
+        "type": "feature",
+        "label": "the valleys",
+        "keywords": [
+          "valley",
+          "tall",
+          "small",
+          "depression",
+          "hollow",
+          "valleys"
+        ],
+        "description": "1 valley in the bottom-center",
+        "feature_refs": [
+          8
+        ],
+        "metadata": {},
+        "created_at": 1762391178.5170538,
+        "user_intent": "create a desert biome. add a tall mountain in the center. add a ridge extending from the mountain to the top-left. add a ridge extending from the mountain to the top-right. add two smaller peaks on the left. add two smaller peaks on the right. add a valley in the bottom-center",
         "relationship_ids": []
       },
       {
@@ -844,40 +896,19 @@
         "type": "feature",
         "label": "the mountains",
         "keywords": [
+          "peak",
           "mountains",
           "peaks",
           "mountain",
-          "summit",
-          "peak"
+          "summit"
         ],
-        "description": "1 mountain in the right",
+        "description": "1 mountain in the left",
         "feature_refs": [
-          3
+          9
         ],
         "metadata": {},
-        "created_at": 1762211183.758228,
-        "user_intent": "add a mountain and sand dunes on the right",
-        "relationship_ids": []
-      },
-      {
-        "id": "dunes_1_1",
-        "type": "feature",
-        "label": "the dunes",
-        "keywords": [
-          "sand",
-          "desert",
-          "dune",
-          "arid",
-          "dunes",
-          "sandy"
-        ],
-        "description": "1 dunes in the right",
-        "feature_refs": [
-          4
-        ],
-        "metadata": {},
-        "created_at": 1762211183.7595522,
-        "user_intent": "add a mountain and sand dunes on the right",
+        "created_at": 1762391198.818649,
+        "user_intent": "add a mountain on the left",
         "relationship_ids": []
       },
       {
@@ -885,84 +916,59 @@
         "type": "feature",
         "label": "the mountains",
         "keywords": [
+          "peak",
           "mountains",
           "peaks",
           "mountain",
-          "summit",
-          "peak"
+          "summit"
         ],
-        "description": "1 mountain in the middle",
+        "description": "1 mountain in the left",
         "feature_refs": [
-          5
+          10
         ],
         "metadata": {},
-        "created_at": 1762211198.7659404,
-        "user_intent": "add a mountain and sand dunes on the middle",
+        "created_at": 1762391203.6689951,
+        "user_intent": "add a mountain on the left",
         "relationship_ids": []
       },
       {
-        "id": "dunes_1_2",
+        "id": "mountain_1_3",
         "type": "feature",
-        "label": "the dunes",
+        "label": "the mountains",
         "keywords": [
-          "sand",
-          "desert",
-          "dune",
-          "arid",
-          "dunes",
-          "sandy"
+          "peak",
+          "mountains",
+          "peaks",
+          "mountain",
+          "summit"
         ],
-        "description": "1 dunes in the middle",
+        "description": "1 mountain in the left",
         "feature_refs": [
-          6
+          11
         ],
         "metadata": {},
-        "created_at": 1762211198.7659404,
-        "user_intent": "add a mountain and sand dunes on the middle",
+        "created_at": 1762391208.1135786,
+        "user_intent": "add a mountain on the left",
         "relationship_ids": []
       },
       {
-        "id": "hill_1",
+        "id": "mountain_1_4",
         "type": "feature",
-        "label": "the hills",
+        "label": "the mountains",
         "keywords": [
-          "mound",
-          "rolling",
-          "rise",
-          "hills",
-          "hill"
+          "peak",
+          "mountains",
+          "peaks",
+          "mountain",
+          "summit"
         ],
-        "description": "1 hill in the center",
+        "description": "1 mountain in the left",
         "feature_refs": [
-          7
-        ],
-        "metadata": {},
-        "created_at": 1762211207.5676394,
-        "user_intent": "add some rolling hills to the scene",
-        "relationship_ids": []
-      },
-      {
-        "id": "hill_5",
-        "type": "group",
-        "label": "five hills",
-        "keywords": [
-          "mound",
-          "rolling",
-          "rise",
-          "hills",
-          "hill"
-        ],
-        "description": "5 hills in the center",
-        "feature_refs": [
-          8,
-          9,
-          10,
-          11,
           12
         ],
         "metadata": {},
-        "created_at": 1762211228.721371,
-        "user_intent": "add 5 rolling hills to the scene",
+        "created_at": 1762391212.3002532,
+        "user_intent": "add a mountain on the left",
         "relationship_ids": []
       }
     ],
@@ -971,5 +977,5 @@
       "next_id": 1
     }
   },
-  "next_id": 22
+  "next_id": 13
 }

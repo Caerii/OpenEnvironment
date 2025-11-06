@@ -454,31 +454,87 @@ Examples with Scene Graph Context:
             return None
     
     def _generate_compact_tool_context(self) -> str:
-        """Generate compact tool context for the system prompt."""
-        lines = ["\n=== AVAILABLE TOOLS (MCP Registry) ===\n"]
-        lines.append("You have access to the following terrain generation tools:\n")
+        """Generate detailed tool context with full parameter information for LLM."""
+        lines = ["\n=== AVAILABLE TOOLS WITH PARAMETERS ===\n"]
+        lines.append("You have access to the following terrain generation tools with full parameter control.\n")
+        lines.append("IMPORTANT: Use specific parameter values based on user intent and context.\n")
         
-        # List primitive tools compactly
+        # List primitive tools with full parameter details
         primitives = self.tool_registry.get_tools_by_category(ToolCategory.PRIMITIVE)
         lines.append("PRIMITIVE FEATURES:")
         for tool in primitives:
-            lines.append(f"  - {tool.name}: {tool.description[:80]}...")
+            lines.append(f"\n{tool.name}:")
+            lines.append(f"  Description: {tool.description}")
+            if tool.parameters:
+                lines.append("  Parameters:")
+                for param in tool.parameters:
+                    req = " (required)" if param.required else " (optional)"
+                    default = f" [default: {param.default}]" if param.default is not None else ""
+                    min_max = ""
+                    if param.minimum is not None and param.maximum is not None:
+                        min_max = f" [range: {param.minimum}-{param.maximum}]"
+                    elif param.minimum is not None:
+                        min_max = f" [min: {param.minimum}]"
+                    elif param.maximum is not None:
+                        min_max = f" [max: {param.maximum}]"
+                    lines.append(f"    - {param.name} ({param.type}){req}{default}{min_max}")
+                    if param.description:
+                        lines.append(f"      {param.description}")
         
         # List operation tools
         operations = self.tool_registry.get_tools_by_category(ToolCategory.OPERATION)
         if operations:
-            lines.append("\nOPERATIONS:")
+            lines.append("\n\nOPERATIONS:")
             for tool in operations:
-                lines.append(f"  - {tool.name}: {tool.description[:80]}...")
+                lines.append(f"\n{tool.name}:")
+                lines.append(f"  Description: {tool.description}")
+                if tool.parameters:
+                    lines.append("  Parameters:")
+                    for param in tool.parameters:
+                        req = " (required)" if param.required else " (optional)"
+                        default = f" [default: {param.default}]" if param.default is not None else ""
+                        min_max = ""
+                        if param.minimum is not None and param.maximum is not None:
+                            min_max = f" [range: {param.minimum}-{param.maximum}]"
+                        lines.append(f"    - {param.name} ({param.type}){req}{default}{min_max}")
+                        if param.description:
+                            lines.append(f"      {param.description}")
         
         # List composite tools
         composites = self.tool_registry.get_tools_by_category(ToolCategory.COMPOSITE)
         if composites:
-            lines.append("\nCOMPOSITE FEATURES:")
+            lines.append("\n\nCOMPOSITE FEATURES:")
             for tool in composites:
-                lines.append(f"  - {tool.name}: {tool.description[:80]}...")
+                lines.append(f"\n{tool.name}:")
+                lines.append(f"  Description: {tool.description}")
+                if tool.parameters:
+                    lines.append("  Parameters:")
+                    for param in tool.parameters:
+                        req = " (required)" if param.required else " (optional)"
+                        default = f" [default: {param.default}]" if param.default is not None else ""
+                        min_max = ""
+                        if param.minimum is not None and param.maximum is not None:
+                            min_max = f" [range: {param.minimum}-{param.maximum}]"
+                        lines.append(f"    - {param.name} ({param.type}){req}{default}{min_max}")
+                        if param.description:
+                            lines.append(f"      {param.description}")
         
-        lines.append("\nAll tools support spatial placement (coordinates or regions) and parameter customization.")
+        # Parameter judgment guidelines
+        lines.append("\n\n=== PARAMETER JUDGMENT GUIDELINES ===\n")
+        lines.append("Map user intent to concrete parameter values:")
+        lines.append("  - 'tall' / 'high' → use values near maximum (e.g., height: 0.9)")
+        lines.append("  - 'gentle' / 'low' → use values near minimum (e.g., height: 0.2-0.3)")
+        lines.append("  - 'wide' / 'large' → use large radius/width values")
+        lines.append("  - 'narrow' / 'small' → use small radius/width values")
+        lines.append("  - 'deep' → use values near maximum for depth parameters")
+        lines.append("  - 'steep' → use high steepness values (0.8-1.0)")
+        lines.append("  - 'rolling' / 'smooth' → use moderate values with smooth transitions")
+        lines.append("  - When user doesn't specify, use sensible defaults based on context")
+        lines.append("\nConvert modifiers to specific parameters:")
+        lines.append("  - 'taller' → increase height_percent or set height near max")
+        lines.append("  - 'deeper' → increase depth_percent or set depth near max")
+        lines.append("  - 'wider' → increase width_percent or set radius/width larger")
+        lines.append("  - Use specific parameter names from tool definitions above when possible")
         
         return "\n".join(lines)
     

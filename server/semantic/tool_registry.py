@@ -255,6 +255,79 @@ class ToolRegistry:
             ]
         )
         
+        # Forest-specific primitives
+        self.register_tool(
+            name="add_grove",
+            func=None,
+            description="Add a grove (cluster of trees on a gentle hill) to forest terrain. Creates a rounded hill with smooth edges suitable for tree clusters.",
+            category=ToolCategory.PRIMITIVE,
+            parameters=[
+                ToolParameter("position", "object", "Position on terrain grid", True,
+                             properties={"x": {"type": "integer", "minimum": 0, "maximum": 511},
+                                       "y": {"type": "integer", "minimum": 0, "maximum": 511}}),
+                ToolParameter("height", "number", "Height of grove hill (0.1-0.3)", False, default=0.15, minimum=0.1, maximum=0.3),
+                ToolParameter("radius", "integer", "Radius of grove", False, default=40, minimum=30, maximum=80),
+            ],
+            examples=[
+                "Add groves scattered throughout the forest",
+                "Create clusters of trees on gentle hills"
+            ]
+        )
+        
+        self.register_tool(
+            name="add_forest_hill",
+            func=None,
+            description="Add a forest hill (larger than grove, gentle slopes suitable for trees) to forest terrain. Creates rounded hills with smooth, gentle slopes.",
+            category=ToolCategory.PRIMITIVE,
+            parameters=[
+                ToolParameter("position", "object", "Position on terrain grid", True,
+                             properties={"x": {"type": "integer", "minimum": 0, "maximum": 511},
+                                       "y": {"type": "integer", "minimum": 0, "maximum": 511}}),
+                ToolParameter("height", "number", "Height of forest hill (0.2-0.45)", False, default=0.25, minimum=0.2, maximum=0.45),
+                ToolParameter("radius", "integer", "Radius of forest hill", False, default=65, minimum=50, maximum=120),
+            ],
+            examples=[
+                "Add forest hills for varied terrain",
+                "Create gentle forest-covered hills"
+            ]
+        )
+        
+        self.register_tool(
+            name="add_forest_clearing",
+            func=None,
+            description="Add a forest clearing (gentle depression for meadows) to forest terrain. Creates shallow, rounded depressions where trees are absent.",
+            category=ToolCategory.PRIMITIVE,
+            parameters=[
+                ToolParameter("position", "object", "Position on terrain grid", True,
+                             properties={"x": {"type": "integer", "minimum": 0, "maximum": 511},
+                                       "y": {"type": "integer", "minimum": 0, "maximum": 511}}),
+                ToolParameter("depth", "number", "Depth of clearing depression (0.05-0.20)", False, default=0.08, minimum=0.05, maximum=0.20),
+                ToolParameter("radius", "integer", "Radius of clearing", False, default=55, minimum=40, maximum=100),
+            ],
+            examples=[
+                "Add clearings for meadows in the forest",
+                "Create open areas within dense forest"
+            ]
+        )
+        
+        self.register_tool(
+            name="add_forest_valley",
+            func=None,
+            description="Add a forest valley (larger depression, often with streams) to forest terrain. Creates deeper, wider depressions suitable for valleys or streams.",
+            category=ToolCategory.PRIMITIVE,
+            parameters=[
+                ToolParameter("position", "object", "Position on terrain grid", True,
+                             properties={"x": {"type": "integer", "minimum": 0, "maximum": 511},
+                                       "y": {"type": "integer", "minimum": 0, "maximum": 511}}),
+                ToolParameter("depth", "number", "Depth of valley (0.15-0.40)", False, default=0.20, minimum=0.15, maximum=0.40),
+                ToolParameter("radius", "integer", "Radius of valley", False, default=80, minimum=60, maximum=150),
+            ],
+            examples=[
+                "Add forest valleys with streams",
+                "Create deeper depressions in forest terrain"
+            ]
+        )
+        
         # Cliffs
         self.register_tool(
             name="add_cliff",

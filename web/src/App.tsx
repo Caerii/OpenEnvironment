@@ -1,16 +1,60 @@
 import { useState, useEffect } from 'react'
-import { postCommand, modifyCommand, resetTerrain, regenerateTerrain } from './api'
+import { postCommand, modifyCommand, resetTerrain, regenerateTerrain, getServerStatus, listTemplates, Template } from './api'
 import { useStore } from './state'
 import TerrainViewer from './components/TerrainViewer'
+import ApiKeyWarning from './components/ApiKeyWarning'
+import TemplateSelector from './components/TemplateSelector'
+import SeedDisplay from './components/SeedDisplay'
+import BiomeSelector from './components/BiomeSelector'
+import VoxelControls from './components/VoxelControls'
+import SunControls from './components/SunControls'
+import TerrainControls from './components/TerrainControls'
+import LoadingIndicator from './components/LoadingIndicator'
 
 export default function App() {
   const [input, setInput] = useState('create a desert with rolling dunes and two mountains on the left')
   const { 
     setAssets, setStateJson, assets, voxelMode, setVoxelMode,
     sunAzimuth, sunElevation, setSunAzimuth, setSunElevation,
-    voxelResolution, setVoxelResolution
+    voxelResolution, setVoxelResolution, seed, setSeed, biome, setBiome,
+    lastGeneratedSeed, setLastGeneratedSeed
   } = useStore()
   const [isLoading, setIsLoading] = useState(false)
+  const [apiKeyStatus, setApiKeyStatus] = useState<{ configured: boolean; checked: boolean }>({ configured: true, checked: false })
+  const [templates, setTemplates] = useState<Template[]>([])
+  const [categories, setCategories] = useState<string[]>([])
+  const [templatesLoading, setTemplatesLoading] = useState(false)
+
+  // Check API key status on mount
+  useEffect(() => {
+    async function checkApiKeyStatus() {
+      try {
+        const status = await getServerStatus()
+        setApiKeyStatus({ configured: status.cerebras_api_key_configured, checked: true })
+      } catch (error) {
+        console.error('Failed to check API key status:', error)
+        setApiKeyStatus({ configured: false, checked: true })
+      }
+    }
+    checkApiKeyStatus()
+  }, [])
+
+  // Load templates on mount
+  useEffect(() => {
+    async function loadTemplates() {
+      try {
+        setTemplatesLoading(true)
+        const response = await listTemplates()
+        setTemplates(response.templates)
+        setCategories(response.categories)
+      } catch (error) {
+        console.error('Failed to load templates:', error)
+      } finally {
+        setTemplatesLoading(false)
+      }
+    }
+    loadTemplates()
+  }, [])
 
   // Auto-load last terrain on mount
   useEffect(() => {
@@ -20,6 +64,16 @@ export default function App() {
         const res = await regenerateTerrain(voxelMode, voxelResolution)
         setAssets(res.assets)
         setStateJson(res.state)
+        // Update seed from state if available, but preserve -1 if in auto mode
+        if (res.state?.seed !== undefined) {
+          if (seed === -1) {
+            // In auto mode, just store the generated seed for display
+            setLastGeneratedSeed(res.state.seed)
+          } else {
+            setSeed(res.state.seed)
+            setLastGeneratedSeed(null)
+          }
+        }
       } catch (error) {
         console.error('Failed to load last terrain:', error)
       } finally {
@@ -42,6 +96,16 @@ export default function App() {
         const res = await regenerateTerrain(voxelMode, voxelResolution)
         setAssets(res.assets)
         setStateJson(res.state)
+        // Update seed from state if available, but preserve -1 if in auto mode
+        if (res.state?.seed !== undefined) {
+          if (seed === -1) {
+            // In auto mode, just store the generated seed for display
+            setLastGeneratedSeed(res.state.seed)
+          } else {
+            setSeed(res.state.seed)
+            setLastGeneratedSeed(null)
+          }
+        }
       } catch (error) {
         console.error('Failed to regenerate with voxel settings:', error)
       } finally {
@@ -57,9 +121,18 @@ export default function App() {
     setIsLoading(true)
     try {
       const fn = kind === 'gen' ? postCommand : modifyCommand
-      const res = await fn(input, voxelMode, voxelResolution)
+      const res = await fn(input, voxelMode, voxelResolution, seed, biome !== 'desert' ? biome : undefined)
       setAssets(res.assets)
       setStateJson(res.state)
+      // If seed is -1, preserve it but store the generated seed for display
+      if (seed === -1 && res.state?.seed !== undefined) {
+        setLastGeneratedSeed(res.state.seed)
+        // Keep seed at -1 for next time
+      } else if (res.state?.seed !== undefined) {
+        // Update seed from state if not in auto mode
+        setSeed(res.state.seed)
+        setLastGeneratedSeed(null)  // Clear last generated seed when not in auto mode
+      }
       // Update voxel mode in store if voxel assets are present
       if (res.assets.voxel_obj) {
         setVoxelMode(true)
@@ -72,175 +145,82 @@ export default function App() {
   async function reset() {
     setIsLoading(true)
     try {
-      const res = await resetTerrain()
+      const res = await resetTerrain(seed, biome !== 'desert' ? biome : undefined)
       setAssets(res.assets)
       setStateJson(res.state)
+      // If seed is -1, preserve it but store the generated seed for display
+      if (seed === -1 && res.state?.seed !== undefined) {
+        setLastGeneratedSeed(res.state.seed)
+        // Keep seed at -1 for next time
+      } else if (res.state?.seed !== undefined) {
+        // Update seed from state if not in auto mode
+        setSeed(res.state.seed)
+        setLastGeneratedSeed(null)  // Clear last generated seed when not in auto mode
+      }
       setInput('') // Clear input
     } finally {
       setIsLoading(false)
     }
   }
 
+
   return (
     <div style={{ display:'grid', gridTemplateColumns:'1fr 380px', height:'100vh' }}>
       <div><TerrainViewer /></div>
       <div style={{ padding:'16px', borderLeft:'1px solid #222', display:'flex', flexDirection:'column', gap:'12px' }}>
         <h2 style={{ margin:0 }}>Semantic Terrain</h2>
-        <textarea
-          value={input}
-          onChange={e=>setInput(e.target.value)}
-          rows={6}
-          style={{ width:'100%', background:'#111', color:'#ddd', border:'1px solid #333', borderRadius:8, padding:8 }}
-          placeholder='e.g., "add a valley in the center"'
+        
+        <TemplateSelector
+          templates={templates}
+          categories={categories}
+          isLoading={isLoading}
+          templatesLoading={templatesLoading}
+          seed={seed}
+          biome={biome}
+          onTemplateApplied={() => {}}
         />
-        <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:14, color:'#ddd' }}>
-          <input
-            type="checkbox"
-            checked={voxelMode}
-            onChange={e=>setVoxelMode(e.target.checked)}
-            style={{ cursor:'pointer' }}
-          />
-          <span>Generate & View Voxel Terrain</span>
-        </label>
         
-        {/* Voxel Resolution Slider */}
-        {voxelMode && (
-          <div style={{ padding:'12px', background:'#111', borderRadius:8, border:'1px solid #333' }}>
-            <div style={{ fontSize:14, fontWeight:'bold', marginBottom:8, color:'#ddd' }}>🧊 Voxel Resolution</div>
-            
-            <div style={{ marginBottom:8 }}>
-              <label style={{ display:'block', fontSize:12, marginBottom:4, color:'#aaa' }}>
-                Resolution: {voxelResolution}³ <span style={{ opacity:0.6 }}>
-                  ({Math.pow(voxelResolution, 3).toLocaleString()} voxels, 
-                  {voxelResolution <= 128 ? ' Low' : 
-                   voxelResolution <= 256 ? ' Medium' : 
-                   voxelResolution <= 512 ? ' High' : 
-                   voxelResolution <= 1024 ? ' Very High' : ' Ultra'})
-                </span>
-              </label>
-              <input
-                type="range"
-                min="128"
-                max="2048"
-                step="128"
-                value={voxelResolution}
-                onChange={e=>setVoxelResolution(Number(e.target.value))}
-                style={{ width:'100%', cursor:'pointer' }}
-              />
-              <div style={{ display:'flex', justifyContent:'space-between', fontSize:10, opacity:0.5, marginTop:2 }}>
-                <span>128 (Low)</span>
-                <span>512 (High)</span>
-                <span>2048 (Ultra)</span>
-              </div>
-            </div>
-            
-            <div style={{ fontSize:10, opacity:0.6, marginTop:8 }}>
-              ⚠️ Higher resolutions increase generation time and memory usage
-            </div>
-          </div>
-        )}
+        <ApiKeyWarning configured={apiKeyStatus.configured} checked={apiKeyStatus.checked} />
         
-        {/* Sun Position Controls */}
-        <div style={{ padding:'12px', background:'#111', borderRadius:8, border:'1px solid #333' }}>
-          <div style={{ fontSize:14, fontWeight:'bold', marginBottom:8, color:'#ddd' }}>☀️ Sun Position</div>
-          
-          <div style={{ marginBottom:8 }}>
-            <label style={{ display:'block', fontSize:12, marginBottom:4, color:'#aaa' }}>
-              Azimuth: {sunAzimuth}° <span style={{ opacity:0.6 }}>
-                ({sunAzimuth === 0 ? 'N' : 
-                  sunAzimuth === 45 ? 'NE' : 
-                  sunAzimuth === 90 ? 'E' : 
-                  sunAzimuth === 135 ? 'SE' : 
-                  sunAzimuth === 180 ? 'S' : 
-                  sunAzimuth === 225 ? 'SW' : 
-                  sunAzimuth === 270 ? 'W' : 
-                  sunAzimuth === 315 ? 'NW' : ''})
-              </span>
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="360"
-              step="1"
-              value={sunAzimuth}
-              onChange={e=>setSunAzimuth(Number(e.target.value))}
-              style={{ width:'100%', cursor:'pointer' }}
-            />
-            <div style={{ display:'flex', justifyContent:'space-between', fontSize:10, opacity:0.5, marginTop:2 }}>
-              <span>N (0°)</span>
-              <span>E (90°)</span>
-              <span>S (180°)</span>
-              <span>W (270°)</span>
-            </div>
-          </div>
-          
-          <div style={{ marginBottom:8 }}>
-            <label style={{ display:'block', fontSize:12, marginBottom:4, color:'#aaa' }}>
-              Elevation: {sunElevation}° <span style={{ opacity:0.6 }}>
-                ({sunElevation <= 10 ? 'Sunrise/Sunset' : 
-                  sunElevation <= 30 ? 'Low' : 
-                  sunElevation <= 60 ? 'Mid' : 
-                  sunElevation <= 85 ? 'High' : 'Overhead'})
-              </span>
-            </label>
-            <input
-              type="range"
-              min="5"
-              max="90"
-              step="1"
-              value={sunElevation}
-              onChange={e=>setSunElevation(Number(e.target.value))}
-              style={{ width:'100%', cursor:'pointer' }}
-            />
-            <div style={{ display:'flex', justifyContent:'space-between', fontSize:10, opacity:0.5, marginTop:2 }}>
-              <span>Horizon (5°)</span>
-              <span>Mid (45°)</span>
-              <span>Overhead (90°)</span>
-            </div>
-          </div>
-          
-          {/* Quick Presets */}
-          <div style={{ fontSize:11, marginTop:12, paddingTop:8, borderTop:'1px solid #333' }}>
-            <div style={{ opacity:0.7, marginBottom:4 }}>Presets:</div>
-            <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
-              <button onClick={()=>{setSunAzimuth(135);setSunElevation(60)}} style={presetBtn}>Morning</button>
-              <button onClick={()=>{setSunAzimuth(180);setSunElevation(70)}} style={presetBtn}>Noon</button>
-              <button onClick={()=>{setSunAzimuth(225);setSunElevation(20)}} style={presetBtn}>Evening</button>
-              <button onClick={()=>{setSunAzimuth(90);setSunElevation(10)}} style={presetBtn}>Sunrise</button>
-            </div>
-          </div>
-        </div>
+        <SeedDisplay 
+          seed={seed} 
+          onSeedChange={(newSeed) => {
+            setSeed(newSeed)
+            // Clear last generated seed if user changes away from auto mode
+            if (newSeed !== -1) {
+              setLastGeneratedSeed(null)
+            }
+          }} 
+          lastGeneratedSeed={lastGeneratedSeed} 
+          disabled={isLoading} 
+        />
         
-        <div style={{ display:'flex', gap:8 }}>
-          <button onClick={()=>send('gen')} disabled={isLoading} style={isLoading ? btnDisabled : btn}>Generate</button>
-          <button onClick={()=>send('mod')} disabled={isLoading} style={isLoading ? btnDisabled : btn}>Modify</button>
-          <button onClick={reset} disabled={isLoading} style={isLoading ? {...btnDisabled, background:'#d32f2f'} : {...btn, background:'#d32f2f'}}>Reset</button>
-        </div>
+        <BiomeSelector biome={biome} onBiomeChange={setBiome} disabled={isLoading} />
         
-        {/* Loading Indicator */}
-        {isLoading && (
-          <div style={{ 
-            padding: '12px', 
-            background: '#1f6feb22', 
-            border: '1px solid #1f6feb', 
-            borderRadius: 8, 
-            fontSize: 13,
-            color: '#1f6feb',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8
-          }}>
-            <div style={{ 
-              width: 12, 
-              height: 12, 
-              border: '2px solid #1f6feb', 
-              borderTop: '2px solid transparent',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite'
-            }} />
-            <span>Generating terrain...</span>
-          </div>
-        )}
+        <TerrainControls
+          input={input}
+          onInputChange={setInput}
+          isLoading={isLoading}
+          onGenerate={() => send('gen')}
+          onModify={() => send('mod')}
+          onReset={reset}
+        />
+        
+        <VoxelControls
+          voxelMode={voxelMode}
+          voxelResolution={voxelResolution}
+          onVoxelModeChange={setVoxelMode}
+          onVoxelResolutionChange={setVoxelResolution}
+        />
+        
+        <SunControls
+          sunAzimuth={sunAzimuth}
+          sunElevation={sunElevation}
+          onAzimuthChange={setSunAzimuth}
+          onElevationChange={setSunElevation}
+        />
+        
+        <LoadingIndicator isLoading={isLoading} />
         
         {/* No Terrain Loaded Message */}
         {!isLoading && !assets && (
@@ -255,36 +235,7 @@ export default function App() {
             ⚠️ No terrain loaded. Click "Generate" to create terrain or check if server is running.
           </div>
         )}
-        
-        <div style={{ fontSize:12, opacity:0.8 }}>
-          <p>Latest assets:</p>
-          <code style={{ display:'block', wordBreak:'break-all', maxHeight: 200, overflow: 'auto' }}>
-            {assets ? JSON.stringify(assets, null, 2) : 'No terrain loaded yet'}
-          </code>
-        </div>
       </div>
     </div>
   )
 }
-
-const btn: React.CSSProperties = {
-  background:'#1f6feb', color:'#fff', border:'none', padding:'8px 12px',
-  borderRadius:8, cursor:'pointer'
-}
-
-const btnDisabled: React.CSSProperties = {
-  ...btn,
-  opacity: 0.5,
-  cursor: 'not-allowed'
-}
-
-const presetBtn: React.CSSProperties = {
-  background:'#2a2a2a', 
-  color:'#ddd', 
-  border:'1px solid #444', 
-  padding:'4px 8px',
-  borderRadius:4, 
-  cursor:'pointer',
-  fontSize:11
-}
-

@@ -809,6 +809,219 @@ class TerracesGenerator(FeatureGenerator):
 # Special Feature Generators
 # ============================================================================
 
+class FlatZoneGenerator(FeatureGenerator):
+    """Generator for flat zones (reserved walkable areas)."""
+    
+    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+        from ..primitives.walkability_zones import generate_flat_zone
+        cx = feat.get("x", feat.get("cx", RES // 2))
+        cy = feat.get("y", feat.get("cy", RES // 2))
+        radius = feat.get("radius", 80)
+        flatness = feat.get("flatness", 0.0)
+        feather = feat.get("feather", 10)
+        return generate_flat_zone(cx, cy, radius, flatness, feather)
+    
+    def get_blending_mode(self) -> BlendingMode:
+        return BlendingMode.MIN  # Ensure flatness
+    
+    def get_defaults(self) -> Dict:
+        return {"radius": 80, "flatness": 0.0, "feather": 10}
+    
+    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
+        """Create flat zone with variation."""
+        from ..engine.variation import VariationEngine
+        variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
+        radius = VariationEngine.apply_variation_int(80, 0.15, variation_seed, 60, 120)
+        return {"type": "flat_zone", "x": cx, "y": cy, "radius": radius, "flatness": 0.0}
+
+
+class PathGenerator(FeatureGenerator):
+    """Generator for paths (linear walkable routes)."""
+    
+    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+        from ..primitives.walkability_zones import generate_path
+        start = feat.get("start", (0, 0))
+        end = feat.get("end", (RES, RES))
+        width = feat.get("width", 30)
+        flatness = feat.get("flatness", 0.0)
+        feather = feat.get("feather", 8)
+        return generate_path(start, end, width, flatness, feather)
+    
+    def get_blending_mode(self) -> BlendingMode:
+        return BlendingMode.MIN  # Ensure flatness
+    
+    def get_defaults(self) -> Dict:
+        return {"width": 30, "flatness": 0.0, "feather": 8}
+    
+    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
+        """Create path - requires start/end, not center."""
+        # Paths need explicit start/end, not center-based
+        # This is a fallback - should be called with explicit start/end
+        return None
+
+
+class ClearingGenerator(FeatureGenerator):
+    """Generator for clearings (large open areas)."""
+    
+    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+        from ..primitives.walkability_zones import generate_clearing
+        cx = feat.get("x", feat.get("cx", RES // 2))
+        cy = feat.get("y", feat.get("cy", RES // 2))
+        radius = feat.get("radius", 120)
+        flatness = feat.get("flatness", 0.0)
+        feather = feat.get("feather", 15)
+        return generate_clearing(cx, cy, radius, flatness, feather)
+    
+    def get_blending_mode(self) -> BlendingMode:
+        return BlendingMode.MIN  # Ensure flatness
+    
+    def get_defaults(self) -> Dict:
+        return {"radius": 120, "flatness": 0.0, "feather": 15}
+    
+    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
+        """Create clearing with variation."""
+        from ..engine.variation import VariationEngine
+        variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
+        radius = VariationEngine.apply_variation_int(120, 0.20, variation_seed, 90, 180)
+        return {"type": "clearing", "x": cx, "y": cy, "radius": radius, "flatness": 0.0}
+
+
+# ============================================================================
+# Forest-Specific Feature Generators
+# ============================================================================
+
+class GroveGenerator(FeatureGenerator):
+    """Generator for groves (clusters of trees on gentle hills)."""
+    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+        from ..primitives.forest import generate_grove
+        cx, cy = feat["x"], feat["y"]
+        radius = feat.get("radius", 40)
+        height = feat.get("height", 0.15)
+        use_noise = feat.get("use_noise", True)
+        return generate_grove(cx, cy, radius, height, use_noise, seed)
+    
+    def get_blending_mode(self) -> BlendingMode:
+        return BlendingMode.MAX
+    
+    def get_defaults(self) -> Dict:
+        return {"radius": 40, "height": 0.15, "use_noise": True}
+    
+    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
+        """Create grove with variation."""
+        from ..engine.variation import VariationEngine
+        variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
+        
+        height = VariationEngine.apply_variation(0.15, 0.20, variation_seed, 0.10, 0.20)
+        radius = VariationEngine.apply_variation_int(40, 0.25, variation_seed + 1, 30, 50)
+        
+        return {"type": "grove", "x": cx, "y": cy, "radius": radius, "height": height}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify grove parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "height", modifiers, max_value=0.3)
+        apply_modifier_to_param(feat, "radius", modifiers, max_value=80, is_int=True)
+
+
+class ForestHillGenerator(FeatureGenerator):
+    """Generator for forest hills (larger hills suitable for trees)."""
+    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+        from ..primitives.forest import generate_forest_hill
+        cx, cy = feat["x"], feat["y"]
+        radius = feat.get("radius", 65)
+        height = feat.get("height", 0.25)
+        use_noise = feat.get("use_noise", True)
+        return generate_forest_hill(cx, cy, radius, height, use_noise, seed)
+    
+    def get_blending_mode(self) -> BlendingMode:
+        return BlendingMode.MAX
+    
+    def get_defaults(self) -> Dict:
+        return {"radius": 65, "height": 0.25, "use_noise": True}
+    
+    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
+        """Create forest hill with variation."""
+        from ..engine.variation import VariationEngine
+        variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
+        
+        height = VariationEngine.apply_variation(0.25, 0.20, variation_seed, 0.20, 0.35)
+        radius = VariationEngine.apply_variation_int(65, 0.25, variation_seed + 1, 50, 80)
+        
+        return {"type": "forest_hill", "x": cx, "y": cy, "radius": radius, "height": height}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify forest hill parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "height", modifiers, max_value=0.45)
+        apply_modifier_to_param(feat, "radius", modifiers, max_value=120, is_int=True)
+
+
+class ForestClearingGenerator(FeatureGenerator):
+    """Generator for forest clearings (gentle depressions for meadows)."""
+    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+        from ..primitives.forest import generate_forest_clearing
+        cx, cy = feat["x"], feat["y"]
+        radius = feat.get("radius", 55)
+        depth = feat.get("depth", 0.08)
+        use_noise = feat.get("use_noise", True)
+        return generate_forest_clearing(cx, cy, radius, depth, use_noise, seed)
+    
+    def get_blending_mode(self) -> BlendingMode:
+        return BlendingMode.MIN  # Create depressions
+    
+    def get_defaults(self) -> Dict:
+        return {"radius": 55, "depth": 0.08, "use_noise": True}
+    
+    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
+        """Create forest clearing with variation."""
+        from ..engine.variation import VariationEngine
+        variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
+        
+        depth = VariationEngine.apply_variation(0.08, 0.20, variation_seed, 0.05, 0.15)
+        radius = VariationEngine.apply_variation_int(55, 0.25, variation_seed + 1, 40, 70)
+        
+        return {"type": "forest_clearing", "x": cx, "y": cy, "radius": radius, "depth": depth}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify forest clearing parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "depth", modifiers, max_value=0.20)
+        apply_modifier_to_param(feat, "radius", modifiers, max_value=100, is_int=True)
+
+
+class ForestValleyGenerator(FeatureGenerator):
+    """Generator for forest valleys (larger depressions, often with streams)."""
+    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+        from ..primitives.forest import generate_forest_valley
+        cx, cy = feat["x"], feat["y"]
+        radius = feat.get("radius", 80)
+        depth = feat.get("depth", 0.20)
+        use_noise = feat.get("use_noise", True)
+        return generate_forest_valley(cx, cy, radius, depth, use_noise, seed)
+    
+    def get_blending_mode(self) -> BlendingMode:
+        return BlendingMode.MIN  # Create depressions
+    
+    def get_defaults(self) -> Dict:
+        return {"radius": 80, "depth": 0.20, "use_noise": True}
+    
+    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
+        """Create forest valley with variation."""
+        from ..engine.variation import VariationEngine
+        variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
+        
+        depth = VariationEngine.apply_variation(0.20, 0.20, variation_seed, 0.15, 0.30)
+        radius = VariationEngine.apply_variation_int(80, 0.25, variation_seed + 1, 60, 100)
+        
+        return {"type": "forest_valley", "x": cx, "y": cy, "radius": radius, "depth": depth}
+    
+    def modify_feature(self, feat: Dict, modifiers: Dict):
+        """Modify forest valley parameters."""
+        from ..engine.modification import apply_modifier_to_param
+        apply_modifier_to_param(feat, "depth", modifiers, max_value=0.40)
+        apply_modifier_to_param(feat, "radius", modifiers, max_value=150, is_int=True)
+
+
 class SlopeGenerator(FeatureGenerator):
     """Slope can be linear or radial."""
     
@@ -1000,6 +1213,15 @@ def _register_all_generators():
     FeatureRegistry.register("spur", SpurGenerator())
     FeatureRegistry.register("dunes", DunesGenerator())
     FeatureRegistry.register("terraces", TerracesGenerator())
+    # Walkability zones
+    FeatureRegistry.register("flat_zone", FlatZoneGenerator())
+    FeatureRegistry.register("path", PathGenerator())
+    FeatureRegistry.register("clearing", ClearingGenerator())
+    # Forest-specific primitives
+    FeatureRegistry.register("grove", GroveGenerator())
+    FeatureRegistry.register("forest_hill", ForestHillGenerator())
+    FeatureRegistry.register("forest_clearing", ForestClearingGenerator())
+    FeatureRegistry.register("forest_valley", ForestValleyGenerator())
 
 
 # Auto-register on import
