@@ -36,7 +36,8 @@ class StatusController:
                 "ok": True,
                 "cerebras_api_key_configured": llm_configured,
                 "llm_parser_available": llm_parser_available,
-                "server_ready": True
+                "server_ready": True,
+                "supports_auto_refresh": True  # Server supports polling for changes
             }
         except Exception as e:
             error_msg = f"Failed to get status: {str(e)}"
@@ -46,7 +47,8 @@ class StatusController:
                 "error": error_msg,
                 "cerebras_api_key_configured": False,
                 "llm_parser_available": False,
-                "server_ready": False
+                "server_ready": False,
+                "supports_auto_refresh": False
             }
 
 

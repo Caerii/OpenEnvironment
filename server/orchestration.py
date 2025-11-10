@@ -7,6 +7,8 @@ clear, single-purpose steps that are easy to understand and test.
 import logging
 from typing import Dict, List, Tuple, Optional, Set
 
+from .semantic.narrative.utils import run_narrative_pipeline
+
 logger = logging.getLogger(__name__)
 
 
@@ -65,15 +67,65 @@ def parse_command_to_actions(
     if not command or not command.strip():
         return []
     
-    # Case 3: Parse natural language command
     try:
-        from .parsing import CommandParser
-        parser = CommandParser()
-        parsed = parser.parse(command, context=state)
+        actions, metadata = run_narrative_pipeline(command, state)
+        if actions:
+            if isinstance(state, dict):
+                state["_debug_last_parser"] = "narrative"
+                state["_last_narrative_meta"] = metadata
+            logger.info("Narrative pipeline executed with %d actions", len(actions))
+            return actions
+    except Exception as narrative_exc:
+        logger.warning(
+            "Narrative pipeline exception for '%s': %s",
+            command[:60], narrative_exc,
+            exc_info=True
+        )
+ 
+    # FIX: Use SemanticParser (advanced with scene graph context) instead of CommandParser
+    try:
+        from .semantic.parser import SemanticParser
+        parser = SemanticParser()
+        parsed = parser.parse(command, scene_state=state)  # Pass scene_state for full context!
+        if isinstance(state, dict):
+            state["_debug_last_parser"] = "semantic"
         return parsed.get("actions", [])
-    except (ImportError, ValueError, KeyError) as e:
-        logger.warning(f"Command parsing failed: {e}, returning no actions")
-        return []
+    except ValueError as e:
+        # SemanticParser unavailable (no API key) - graceful fallback to CommandParser
+        logger.info(f"SemanticParser unavailable ({e}), falling back to CommandParser")
+        try:
+            from .parsing import CommandParser
+            parser = CommandParser()
+            parsed = parser.parse(command, context=state)
+            if isinstance(state, dict):
+                state["_debug_last_parser"] = "regex"
+            return parsed.get("actions", [])
+        except (ImportError, ValueError, KeyError) as e2:
+            logger.warning(f"All parsers failed: {e2}, returning no actions")
+            return []
+    except (ImportError, KeyError) as e:
+        # SemanticParser import/execution failed - fall back to CommandParser
+        logger.warning(f"SemanticParser failed ({e}), falling back to CommandParser")
+        try:
+            from .parsing import CommandParser
+            parser = CommandParser()
+            parsed = parser.parse(command, context=state)
+            if isinstance(state, dict):
+                state["_debug_last_parser"] = "regex"
+            return parsed.get("actions", [])
+        except (ImportError, ValueError, KeyError) as e2:
+            logger.warning(f"All parsers failed: {e2}, returning no actions")
+            return []
+    
+    # OLD IMPLEMENTATION (kept for reference):
+    # try:
+    #     from .parsing import CommandParser
+    #     parser = CommandParser()
+    #     parsed = parser.parse(command, context=state)
+    #     return parsed.get("actions", [])
+    # except (ImportError, ValueError, KeyError) as e:
+    #     logger.warning(f"Command parsing failed: {e}, returning no actions")
+    #     return []
 
 
 def partition_actions(actions: List[Dict]) -> Tuple[List[Dict], List[Dict]]:
@@ -307,7 +359,8 @@ def build_final_terrain(feature_state, base_biome_fn, seed: int):
     
     # Generate outputs
     heightmap = builder.get_heightmap()
-    splatmap = builder.get_splatmap()
+    # FIX: Method name was get_splatmap() but actual method is build_splatmap()
+    splatmap = builder.build_splatmap()  # FIXED: was get_splatmap()
     
     return heightmap, splatmap
 

@@ -18,6 +18,7 @@ type Store = {
   seed: number  // Terrain generation seed
   biome: string  // Base biome type ('desert', 'forest', 'arctic', 'flat')
   lastGeneratedSeed: number | null  // Last actual seed used when seed=-1 (for display only)
+  autoRefresh: boolean  // Auto-refresh enabled (polls backend for changes)
   setAssets: (a: Assets | null) => void
   setStateJson: (s: any | null) => void
   setVoxelMode: (v: boolean) => void
@@ -27,6 +28,7 @@ type Store = {
   setSeed: (s: number) => void
   setBiome: (b: string) => void
   setLastGeneratedSeed: (s: number | null) => void
+  setAutoRefresh: (a: boolean) => void
 }
 
 export const useStore = create<Store>((set) => ({
@@ -39,6 +41,7 @@ export const useStore = create<Store>((set) => ({
   seed: -1,  // Default seed (-1 = auto-generate random seed)
   biome: 'desert',  // Default biome
   lastGeneratedSeed: null,  // Last actual seed used when seed=-1 (for display only)
+  autoRefresh: false,  // Default: auto-refresh disabled (enable for Postman workflow)
   setAssets: (a) => set({ assets: a }),
   setStateJson: (s) => set({ stateJson: s }),
   setVoxelMode: (v) => set({ voxelMode: v }),
@@ -47,6 +50,7 @@ export const useStore = create<Store>((set) => ({
   setVoxelResolution: (r) => set({ voxelResolution: r }),
   setSeed: (s) => set({ seed: s }),
   setBiome: (b) => set({ biome: b }),
-  setLastGeneratedSeed: (s) => set({ lastGeneratedSeed: s })
+  setLastGeneratedSeed: (s) => set({ lastGeneratedSeed: s }),
+  setAutoRefresh: (a) => set({ autoRefresh: a })
 }))
 

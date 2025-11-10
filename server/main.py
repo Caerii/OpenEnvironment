@@ -6,6 +6,14 @@ from typing import Optional
 import os
 import logging
 
+from .bootstrap import ensure_bootstrapped
+
+ensure_bootstrapped()
+
+# FIX: Load .env file before anything else to ensure CEREBRAS_API_KEY is available
+from dotenv import load_dotenv
+load_dotenv()
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,

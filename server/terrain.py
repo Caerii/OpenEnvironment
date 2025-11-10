@@ -1,5 +1,7 @@
 """Terrain generation orchestrator - Coordinates primitives, engine, and semantic layers."""
+import copy
 import re
+import time
 import logging
 import numpy as np
 from typing import Dict, Tuple, List, Optional
@@ -27,8 +29,10 @@ from .semantic.spatial_resolver import resolve_position, resolve_multiple_positi
 
 # Import semantic
 from .semantic.state_manager import FeatureState
+from .semantic.evaluation import compute_feature_metrics, evaluate_aesthetic_quality
 from .semantic.scene import TerrainSceneGraph, SceneGraphSerializer, SceneGraphIntegrator
-from .semantic.parser import SemanticParser
+# DEAD IMPORT - SemanticParser is not used in this file (moved to orchestration.py)
+# from .semantic.parser import SemanticParser
 
 # Import utilities (export functions stay here for backward compatibility)
 from .utils import normalize01, clamp01
@@ -266,6 +270,18 @@ def apply_actions(cmd: str, state: Dict, base_biome_fn=None, direct_actions: Lis
     
     # Step 2: Parse command into actions
     actions = parse_command_to_actions(cmd, state, direct_actions)
+
+    if actions:
+        history = state.setdefault("action_history", [])
+        history.append({
+            "command": cmd,
+            "actions": copy.deepcopy(actions),
+            "parser": state.get("_debug_last_parser", "unknown"),
+            "timestamp": time.time(),
+            "seed": seed,
+        })
+        if len(history) > 10:
+            del history[:-10]
     
     # Step 3: Initialize state manager
     feature_state = FeatureState(state)
@@ -308,7 +324,20 @@ def apply_actions(cmd: str, state: Dict, base_biome_fn=None, direct_actions: Lis
     # Update state with feature state
     updated_state = feature_state.to_dict()
     updated_state["semantic_scene"] = state.get("semantic_scene", {})
-    
+    if "_debug_last_parser" in state:
+        updated_state["_debug_last_parser"] = state["_debug_last_parser"]
+    if "action_history" in state:
+        updated_state["action_history"] = state["action_history"]
+    if "_last_narrative_meta" in state:
+        updated_state["_last_narrative_meta"] = state["_last_narrative_meta"]
+
+    if updated_state.get("features"):
+        metrics = compute_feature_metrics(updated_state["features"])
+        quality = evaluate_aesthetic_quality(metrics)
+        meta = updated_state.setdefault("_last_narrative_meta", {})
+        meta.setdefault("metrics", metrics)
+        meta.setdefault("quality", quality)
+ 
     return h, updated_state, splat
 
 def _apply_feature_to_builder(builder: TerrainBuilder, feat: Dict, seed: int):

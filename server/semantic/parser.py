@@ -6,6 +6,8 @@ from typing import Dict, List, Optional
 from dotenv import load_dotenv
 from cerebras.cloud.sdk import Cerebras
 from .tool_registry import get_tool_registry, ToolCategory
+from .spatial_queries import handle_spatial_query
+from .narrative.utils import run_narrative_pipeline
 
 # Load environment variables
 load_dotenv()
@@ -24,15 +26,35 @@ class SemanticParser:
     
     def __init__(self):
         api_key = os.environ.get("CEREBRAS_API_KEY")
+        
+        # FIX: Make graceful like CommandParser - don't crash if no API key
         if not api_key:
-            raise ValueError("CEREBRAS_API_KEY not found in environment variables")
+            logger.info("CEREBRAS_API_KEY not found - LLM features disabled, will use regex fallback")
+            self.client = None
+            self.llm_available = False
+            self.model = None
+        else:
+            self.client = Cerebras(api_key=api_key)
+            # self.model = "qwen-3-235b-a22b-instruct-2507"
+            self.model = "llama3.1-8b"
+            self.llm_available = True
         
-        self.client = Cerebras(api_key=api_key)
-        # self.model = "qwen-3-235b-a22b-instruct-2507"
-        self.model = "llama3.1-8b"
-        self.tool_registry = get_tool_registry()
+        # Load tool registry (always available, even without API key)
+        try:
+            self.tool_registry = get_tool_registry()
+        except Exception as e:
+            logger.warning(f"Tool registry unavailable: {e}")
+            self.tool_registry = None
         
-    def parse(self, command: str, scene_state: Optional[Dict] = None) -> Dict:
+        # OLD IMPLEMENTATION (kept for reference):
+        # api_key = os.environ.get("CEREBRAS_API_KEY")
+        # if not api_key:
+        #     raise ValueError("CEREBRAS_API_KEY not found in environment variables")
+        # self.client = Cerebras(api_key=api_key)
+        # self.model = "llama3.1-8b"
+        # self.tool_registry = get_tool_registry()
+        
+    def parse(self, command: str, scene_state: Optional[Dict] = None, use_react: bool = True) -> Dict:
         """
         Parse a natural language command into structured terrain generation actions.
         
@@ -49,11 +71,26 @@ class SemanticParser:
             - Each action has: kind, type, count, position, modifiers
         """
         # Check if this is a spatial query command
-        from ..spatial_queries import handle_spatial_query
         query_result = handle_spatial_query(command, scene_state)
         if query_result:
             return query_result
         
+        try:
+            actions, metadata = run_narrative_pipeline(command, scene_state)
+            if actions:
+                logger.info(
+                    "Narrative pipeline produced %d actions for command '%s'",
+                    len(actions), command[:60]
+                )
+                if isinstance(scene_state, dict):
+                    scene_state["_last_narrative_meta"] = metadata
+                return {"actions": actions}
+        except Exception as narrative_exc:
+            logger.warning(
+                "Narrative pipeline exception: %s", narrative_exc,
+                exc_info=True
+            )
+
         # Build context-aware system prompt
         system_prompt = self._build_system_prompt(scene_state)
         
@@ -63,6 +100,31 @@ class SemanticParser:
 
 Output only valid JSON, no additional text."""
 
+        # FIX: Check if LLM is available before trying to call it
+        if not self.llm_available or self.client is None:
+            logger.info("LLM not available, falling back to regex parser")
+            return self._fallback_parse(command)
+
+        # NEW: Use ReAct agent V2 for complex multi-turn reasoning with proper tool calling
+        if use_react and scene_state:
+            try:
+                from .react_agent_v2 import ReActAgentV2
+                agent = ReActAgentV2(self.client, self.model)
+                logger.info(f"Using ReAct agent V2 for command: {command[:50]}...")
+                result = agent.solve(command, scene_state)
+                
+                if result.get("success") and result.get("actions"):
+                    logger.info(
+                        f"ReAct agent completed in {result['iterations']} iterations "
+                        f"with {result['total_tool_calls']} tool calls"
+                    )
+                    return {"actions": result["actions"]}
+                else:
+                    logger.warning(f"ReAct agent failed: {result.get('error', 'no actions')}, falling back")
+            except Exception as e:
+                logger.warning(f"ReAct agent V2 failed: {e}, falling back to single-turn parsing")
+
+        # Fallback to single-turn parsing
         try:
             response = self.client.chat.completions.create(
                 messages=[
@@ -85,9 +147,8 @@ Output only valid JSON, no additional text."""
             return self._normalize_response(parsed)
             
         except (ValueError, KeyError, ImportError, json.JSONDecodeError) as e:
-            # Fallback to simple parsing on error
-            logger.warning(f"LLM parsing failed: {e}, falling back to regex parser")
-            return self._fallback_parse(command)
+            logger.warning(f"LLM parsing failed: {e}, returning no actions")
+            return {"actions": []}
     
     def _handle_spatial_query(self, command: str, scene_state: Optional[Dict] = None) -> Optional[Dict]:
         """
@@ -333,11 +394,10 @@ Examples with Scene Graph Context:
     
     def _generate_scene_graph_context(self, scene_state: Dict) -> Optional[str]:
         """
-        Generate structured scene graph context for LLM parsing.
+        Generate COMPACT scene graph context for LLM parsing.
         
-        Provides rich semantic metadata about existing entities, their labels,
-        feature IDs, and relationships. This enables the LLM to resolve
-        references like "the dunes" or "the mountains" intelligently.
+        FIX: Truncated version to prevent context length exceeded errors.
+        Only includes essential information needed for reference resolution.
         
         Args:
             scene_state: Current terrain state dictionary
@@ -366,86 +426,52 @@ Examples with Scene Graph Context:
             if not entities:
                 return None
             
-            # Build structured context
-            lines = ["\n=== SEMANTIC SCENE GRAPH (Structured Context) ===\n"]
-            lines.append("The scene contains semantic entities that you can reference:\n")
+            # SMART HYBRID APPROACH: Minimal context + spatial/attribute hints
+            lines = ["\n=== SCENE ENTITIES ==="]
             
-            # Group entities by type
-            by_type = {}
-            for entity in entities:
-                entity_type = entity.type
-                if entity_type not in by_type:
-                    by_type[entity_type] = []
-                by_type[entity_type].append(entity)
+            # Limit to most recent 10 entities to prevent context overflow
+            MAX_ENTITIES = 10
+            recent_entities = entities[-MAX_ENTITIES:] if len(entities) > MAX_ENTITIES else entities
             
-            # Format entities with metadata
-            for entity_type, type_entities in sorted(by_type.items()):
-                lines.append(f"\n{entity_type.upper()} ENTITIES ({len(type_entities)}):")
-                
-                for entity in type_entities:
-                    # Core info
-                    lines.append(f"  • {entity.label}")
-                    lines.append(f"    - Entity ID: {entity.id}")
-                    lines.append(f"    - Feature IDs: {entity.feature_refs}")
-                    lines.append(f"    - Feature Count: {len(entity.feature_refs)}")
-                    
-                    # Keywords
-                    if entity.keywords:
-                        lines.append(f"    - Keywords: {', '.join(entity.keywords)}")
-                    
-                    # Description
-                    if entity.description:
-                        lines.append(f"    - Description: {entity.description}")
-                    
-                    # User intent
-                    if entity.user_intent:
-                        lines.append(f"    - Created from: '{entity.user_intent}'")
-                    
-                    # Reference examples
-                    lines.append(f"    - Can be referenced as: '{entity.label}'")
-                    if entity.keywords:
-                        lines.append(f"    - Also responds to keywords: {', '.join(entity.keywords)}")
-                    
-                    lines.append("")  # Blank line between entities
+            if len(entities) > MAX_ENTITIES:
+                lines.append(f"Showing {MAX_ENTITIES} most recent of {len(entities)} total entities:")
             
-            # Summary: Quick reference map
-            lines.append("\nQUICK REFERENCE MAP:")
-            for entity in entities:
-                ref_text = f"'{entity.label}'"
-                if entity.keywords:
-                    ref_text += f" or keywords: {', '.join(entity.keywords)}"
-                lines.append(f"  {ref_text} → Feature IDs: {entity.feature_refs}")
-            
-            # Feature inventory by type
-            lines.append("\nFEATURE INVENTORY BY TYPE:")
-            feature_types = {}
-            for entity in entities:
-                for feature_id in entity.feature_refs:
-                    # Find feature type
-                    feature_node = scene_graph.find_feature_by_id(feature_id)
+            # Get feature positions for spatial context (essential for "between", "near")
+            for entity in recent_entities:
+                # Get representative feature position (centroid of group)
+                positions = []
+                for fid in entity.feature_refs[:3]:  # Sample first 3 features
+                    feature_node = scene_graph.find_feature_by_id(fid)
                     if feature_node:
-                        feat_type = feature_node.get_data("type", "unknown")
-                        if feat_type not in feature_types:
-                            feature_types[feat_type] = []
-                        feature_types[feat_type].append(feature_id)
+                        x = feature_node.get_data("x")
+                        y = feature_node.get_data("y")
+                        if x is not None and y is not None:
+                            positions.append((x, y))
+                
+                # Calculate centroid for spatial reference
+                if positions:
+                    avg_x = sum(p[0] for p in positions) // len(positions)
+                    avg_y = sum(p[1] for p in positions) // len(positions)
+                    # Determine region (left/center/right, top/center/bottom)
+                    region_x = "left" if avg_x < 170 else ("center" if avg_x < 341 else "right")
+                    region_y = "top" if avg_y < 170 else ("center" if avg_y < 341 else "bottom")
+                    region = f"{region_y}-{region_x}" if region_y != "center" and region_x != "center" else (region_y if region_x == "center" else region_x)
+                    spatial_info = f" @({avg_x},{avg_y}) {region}"
+                else:
+                    spatial_info = ""
+                
+                # Format: label → IDs (keywords) @position region
+                keywords_str = f" ({', '.join(entity.keywords[:2])})" if entity.keywords else ""
+                count_str = f" {len(entity.feature_refs)}×" if len(entity.feature_refs) > 1 else ""
+                lines.append(f"  '{entity.label}' →{count_str} {entity.feature_refs[:5]}{keywords_str}{spatial_info}")
             
-            for feat_type, feat_ids in sorted(feature_types.items()):
-                lines.append(f"  - {feat_type}: {len(feat_ids)} features {feat_ids}")
+            # Summary
+            type_counts = {}
+            for entity in entities:
+                type_counts[entity.type] = type_counts.get(entity.type, 0) + 1
             
-            # Usage instructions
-            lines.append("\n" + "=" * 70)
-            lines.append("REFERENCE RESOLUTION INSTRUCTIONS:")
-            lines.append("=" * 70)
-            lines.append("When user says:")
-            lines.append('  - "the dunes" → Use entity "the dunes" → Feature IDs: [lookup above]')
-            lines.append('  - "make the mountains taller" → Find entity with label/keyword "mountains"')
-            lines.append('  - "last mountain" → Use ordinal resolution (most recent mountain feature)')
-            lines.append('  - "between the mountains" → Use spatial context from entity feature IDs')
-            lines.append("")
-            lines.append("For modify/remove actions:")
-            lines.append("  - If user says 'the [entity]', use the entity's feature_refs")
-            lines.append("  - If user says '[ordinal] [type]', resolve by ordinal position")
-            lines.append("  - If user says '[type]', use all features of that type")
+            lines.append(f"\nTypes: {dict(type_counts)}")
+            lines.append("Note: Use 'target_feature_ids' for precise targeting.\n")
             
             return "\n".join(lines)
             
@@ -454,87 +480,23 @@ Examples with Scene Graph Context:
             return None
     
     def _generate_compact_tool_context(self) -> str:
-        """Generate detailed tool context with full parameter information for LLM."""
-        lines = ["\n=== AVAILABLE TOOLS WITH PARAMETERS ===\n"]
-        lines.append("You have access to the following terrain generation tools with full parameter control.\n")
-        lines.append("IMPORTANT: Use specific parameter values based on user intent and context.\n")
+        """
+        Generate COMPACT tool context for LLM.
         
-        # List primitive tools with full parameter details
+        FIX: Simplified version to prevent context length exceeded errors.
+        Lists available feature types without detailed parameter information.
+        """
+        lines = ["\n=== AVAILABLE TERRAIN FEATURES ==="]
+        
+        # Just list feature types, no detailed parameters
         primitives = self.tool_registry.get_tools_by_category(ToolCategory.PRIMITIVE)
-        lines.append("PRIMITIVE FEATURES:")
-        for tool in primitives:
-            lines.append(f"\n{tool.name}:")
-            lines.append(f"  Description: {tool.description}")
-            if tool.parameters:
-                lines.append("  Parameters:")
-                for param in tool.parameters:
-                    req = " (required)" if param.required else " (optional)"
-                    default = f" [default: {param.default}]" if param.default is not None else ""
-                    min_max = ""
-                    if param.minimum is not None and param.maximum is not None:
-                        min_max = f" [range: {param.minimum}-{param.maximum}]"
-                    elif param.minimum is not None:
-                        min_max = f" [min: {param.minimum}]"
-                    elif param.maximum is not None:
-                        min_max = f" [max: {param.maximum}]"
-                    lines.append(f"    - {param.name} ({param.type}){req}{default}{min_max}")
-                    if param.description:
-                        lines.append(f"      {param.description}")
+        feature_names = [tool.name for tool in primitives]
+        lines.append(f"Types: {', '.join(feature_names)}")
         
-        # List operation tools
-        operations = self.tool_registry.get_tools_by_category(ToolCategory.OPERATION)
-        if operations:
-            lines.append("\n\nOPERATIONS:")
-            for tool in operations:
-                lines.append(f"\n{tool.name}:")
-                lines.append(f"  Description: {tool.description}")
-                if tool.parameters:
-                    lines.append("  Parameters:")
-                    for param in tool.parameters:
-                        req = " (required)" if param.required else " (optional)"
-                        default = f" [default: {param.default}]" if param.default is not None else ""
-                        min_max = ""
-                        if param.minimum is not None and param.maximum is not None:
-                            min_max = f" [range: {param.minimum}-{param.maximum}]"
-                        lines.append(f"    - {param.name} ({param.type}){req}{default}{min_max}")
-                        if param.description:
-                            lines.append(f"      {param.description}")
-        
-        # List composite tools
-        composites = self.tool_registry.get_tools_by_category(ToolCategory.COMPOSITE)
-        if composites:
-            lines.append("\n\nCOMPOSITE FEATURES:")
-            for tool in composites:
-                lines.append(f"\n{tool.name}:")
-                lines.append(f"  Description: {tool.description}")
-                if tool.parameters:
-                    lines.append("  Parameters:")
-                    for param in tool.parameters:
-                        req = " (required)" if param.required else " (optional)"
-                        default = f" [default: {param.default}]" if param.default is not None else ""
-                        min_max = ""
-                        if param.minimum is not None and param.maximum is not None:
-                            min_max = f" [range: {param.minimum}-{param.maximum}]"
-                        lines.append(f"    - {param.name} ({param.type}){req}{default}{min_max}")
-                        if param.description:
-                            lines.append(f"      {param.description}")
-        
-        # Parameter judgment guidelines
-        lines.append("\n\n=== PARAMETER JUDGMENT GUIDELINES ===\n")
-        lines.append("Map user intent to concrete parameter values:")
-        lines.append("  - 'tall' / 'high' → use values near maximum (e.g., height: 0.9)")
-        lines.append("  - 'gentle' / 'low' → use values near minimum (e.g., height: 0.2-0.3)")
-        lines.append("  - 'wide' / 'large' → use large radius/width values")
-        lines.append("  - 'narrow' / 'small' → use small radius/width values")
-        lines.append("  - 'deep' → use values near maximum for depth parameters")
-        lines.append("  - 'steep' → use high steepness values (0.8-1.0)")
-        lines.append("  - 'rolling' / 'smooth' → use moderate values with smooth transitions")
-        lines.append("  - When user doesn't specify, use sensible defaults based on context")
-        lines.append("\nConvert modifiers to specific parameters:")
-        lines.append("  - 'taller' → increase height_percent or set height near max")
-        lines.append("  - 'deeper' → increase depth_percent or set depth near max")
-        lines.append("  - 'wider' → increase width_percent or set radius/width larger")
-        lines.append("  - Use specific parameter names from tool definitions above when possible")
+        # Simplified parameter guidelines
+        lines.append("\nQuick modifiers:")
+        lines.append("  'tall/high' → height: 0.8-0.9, 'wide' → radius: 60-80")
+        lines.append("  'deep' → depth: 0.7-0.9, 'steep' → steepness: 0.8-1.0\n")
         
         return "\n".join(lines)
     

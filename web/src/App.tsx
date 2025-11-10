@@ -17,7 +17,7 @@ export default function App() {
     setAssets, setStateJson, assets, voxelMode, setVoxelMode,
     sunAzimuth, sunElevation, setSunAzimuth, setSunElevation,
     voxelResolution, setVoxelResolution, seed, setSeed, biome, setBiome,
-    lastGeneratedSeed, setLastGeneratedSeed
+    lastGeneratedSeed, setLastGeneratedSeed, autoRefresh, setAutoRefresh
   } = useStore()
   const [isLoading, setIsLoading] = useState(false)
   const [apiKeyStatus, setApiKeyStatus] = useState<{ configured: boolean; checked: boolean }>({ configured: true, checked: false })
@@ -163,6 +163,66 @@ export default function App() {
     }
   }
 
+  // NEW: Refresh/sync with backend state (useful after Postman calls or external changes)
+  async function refreshFromBackend() {
+    setIsLoading(true)
+    try {
+      const res = await regenerateTerrain(voxelMode, voxelResolution)
+      setAssets(res.assets)
+      setStateJson(res.state)
+      if (res.state?.seed !== undefined) {
+        if (seed === -1) {
+          setLastGeneratedSeed(res.state.seed)
+        } else {
+          setSeed(res.state.seed)
+          setLastGeneratedSeed(null)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh from backend:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Auto-refresh polling: Check backend for changes every 2 seconds when enabled
+  useEffect(() => {
+    if (!autoRefresh) return
+
+    let lastStateHash = JSON.stringify(assets)
+    
+    const intervalId = setInterval(async () => {
+      try {
+        // Don't poll if already loading
+        if (isLoading) return
+        
+        // Fetch current state from backend without triggering loading UI
+        const res = await regenerateTerrain(voxelMode, voxelResolution)
+        const newStateHash = JSON.stringify(res.assets)
+        
+        // Only update if state actually changed (compare asset paths)
+        if (newStateHash !== lastStateHash) {
+          console.log('🔄 Auto-refresh detected changes, updating...')
+          setAssets(res.assets)
+          setStateJson(res.state)
+          if (res.state?.seed !== undefined) {
+            if (seed === -1) {
+              setLastGeneratedSeed(res.state.seed)
+            } else {
+              setSeed(res.state.seed)
+              setLastGeneratedSeed(null)
+            }
+          }
+          lastStateHash = newStateHash
+        }
+      } catch (error) {
+        console.error('Auto-refresh failed:', error)
+      }
+    }, 2000) // Poll every 2 seconds
+
+    return () => clearInterval(intervalId)
+  }, [autoRefresh, voxelMode, voxelResolution, isLoading, seed, setAssets, setStateJson, setSeed, setLastGeneratedSeed, assets])
+
 
   return (
     <div style={{ display:'grid', gridTemplateColumns:'1fr 380px', height:'100vh' }}>
@@ -204,6 +264,9 @@ export default function App() {
           onGenerate={() => send('gen')}
           onModify={() => send('mod')}
           onReset={reset}
+          onRefresh={refreshFromBackend}
+          autoRefresh={autoRefresh}
+          onAutoRefreshToggle={setAutoRefresh}
         />
         
         <VoxelControls

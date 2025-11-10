@@ -1,6 +1,6 @@
 """Command pattern for terrain actions."""
 from abc import ABC, abstractmethod
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Union
 import logging
 import numpy as np
 from ..semantic.state_manager import FeatureState
@@ -236,19 +236,35 @@ def create_command_from_dict(action_dict: Dict) -> ActionCommand:
         raise ValueError(f"Unknown action kind: {kind}")
 
 
-def _apply_feature_to_builder(builder: TerrainBuilder, feat: Dict, seed: int):
+def _apply_feature_to_builder(builder: TerrainBuilder, feat: Union['Feature', Dict], seed: int):
     """
-    Helper to apply a feature dictionary to builder.
+    Helper to apply a feature (Feature or dict) to builder.
+    
+    BRIDGE PATTERN: Accepts both typed Feature and dict during migration.
     
     Uses FeatureRegistry for composable, maintainable primitive handling.
     All 19 primitives are automatically handled through the registry.
     """
     from ..engine.feature_registry import FeatureRegistry
     
-    ftype = feat.get("type")
+    # Import Feature type for type checking
+    try:
+        from ..domain.models import Feature as FeatureType
+        FEATURE_TYPE_AVAILABLE = True
+    except ImportError:
+        FEATURE_TYPE_AVAILABLE = False
+        FeatureType = None
+    
+    # Convert Feature → dict if needed (for current implementation)
+    if FEATURE_TYPE_AVAILABLE and isinstance(feat, FeatureType):
+        feat_dict = feat.to_dict()
+    else:
+        feat_dict = feat
+    
+    ftype = feat_dict.get("type")
     
     if not ftype:
-        logger.warning(f"Feature missing type field: {feat}")
+        logger.warning(f"Feature missing type field: {feat_dict}")
         return
     
     if not FeatureRegistry.has_generator(ftype):
@@ -257,22 +273,22 @@ def _apply_feature_to_builder(builder: TerrainBuilder, feat: Dict, seed: int):
     
     # Generate stamp using registry
     try:
-        stamp = FeatureRegistry.generate_stamp(ftype, feat, seed)
+        stamp = FeatureRegistry.generate_stamp(ftype, feat_dict, seed)
         mode = FeatureRegistry.get_blending_mode(ftype)
         
         # Special handling for dunes (need stamp + mask together)
         if ftype == "dunes":
             from ..primitives.dunes import generate_dune_mask
-            box = (feat["x0"], feat["y0"], feat["x1"], feat["y1"])
+            box = (feat_dict["x0"], feat_dict["y0"], feat_dict["x1"], feat_dict["y1"])
             dune_mask = generate_dune_mask(box)
             builder.apply_feature(stamp, mode, dune_mask_slice=dune_mask, mask_bounds=box,
-                                feature_type=ftype, feature_params=feat)
+                                feature_type=ftype, feature_params=feat_dict)
         else:
             # Apply stamp with feature type for constraint tracking
-            builder.apply_feature(stamp, mode, feature_type=ftype, feature_params=feat)
+            builder.apply_feature(stamp, mode, feature_type=ftype, feature_params=feat_dict)
             
             # Apply special effects (masks, etc.) if needed
-            FeatureRegistry.apply_special_effects(ftype, builder, feat, stamp, seed)
+            FeatureRegistry.apply_special_effects(ftype, builder, feat_dict, stamp, seed)
         
     except Exception as e:
         logger.error(f"Error applying feature '{ftype}': {e}", exc_info=True)

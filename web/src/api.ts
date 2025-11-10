@@ -77,6 +77,7 @@ export interface ServerStatus {
   cerebras_api_key_configured: boolean
   llm_parser_available: boolean
   server_ready: boolean
+  supports_auto_refresh: boolean  // Server supports polling for changes
   error?: string
 }
 

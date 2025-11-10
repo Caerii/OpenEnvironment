@@ -287,12 +287,14 @@ class TerrainState:
     Attributes:
         features: List of all terrain features
         seed: Random seed for deterministic generation
+        biome: Biome name (e.g., "desert", "mountains", "default")
         next_id: Next available feature ID
         semantic_scene: Serialized scene graph (optional)
         metadata: Additional state metadata
     """
     features: List[Feature] = field(default_factory=list)
     seed: int = 0
+    biome: str = "default"
     next_id: int = 1
     semantic_scene: Optional[Dict[str, Any]] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -302,6 +304,7 @@ class TerrainState:
         result = {
             "features": [f.to_dict() for f in self.features],
             "seed": self.seed,
+            "biome": self.biome,
             "next_id": self.next_id,
         }
         if self.semantic_scene is not None:
@@ -315,16 +318,18 @@ class TerrainState:
         """Create TerrainState from dictionary representation."""
         features = [Feature.from_dict(f) for f in data.get("features", [])]
         seed = data.get("seed", 0)
+        biome = data.get("biome", "default")
         next_id = data.get("next_id", 1)
         semantic_scene = data.get("semantic_scene")
         
         # Extract metadata (everything except known keys)
-        known_keys = {"features", "seed", "next_id", "semantic_scene"}
+        known_keys = {"features", "seed", "biome", "next_id", "semantic_scene"}
         metadata = {k: v for k, v in data.items() if k not in known_keys}
         
         return cls(
             features=features,
             seed=seed,
+            biome=biome,
             next_id=next_id,
             semantic_scene=semantic_scene,
             metadata=metadata

@@ -1,0 +1,13 @@
+User command: "{command}"
+
+Scene summary: {scene_summary}
+
+Recent actions:
+{recent_actions}
+
+Aesthetic focus: {aesthetic_goals}
+
+Feature count: {feature_count} | Entity count: {entity_count} | Seed: {seed}
+
+Task: Use tool workflows to understand intent and generate the best terrain actions.
+Plan carefully, call the minimum tools needed, and prefer the narrative tool for aesthetic goals.

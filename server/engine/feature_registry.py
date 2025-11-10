@@ -1,20 +1,72 @@
-"""Feature Registry - Composable primitive system."""
+"""Feature Registry - Composable primitive system.
+
+CORE PRIMITIVES (6 Essential):
+1. Mountain - Hero elevation (rock + snow)
+2. Valley - Hero depression (grass + balance)
+3. Dunes - Sand texture (ONLY source via dune_mask)
+4. Cliff - Vertical drama (rock via cliff_mask)
+5. Plateau - Flat zones (gameplay + unique geometry)
+6. Canyon - Linear exploration (optional but useful)
+
+REFACTORING NOTES (November 2025):
+- Migrating to typed Feature system (domain/models.py)
+- Bridge pattern: Support BOTH dict and Feature during migration
+- Preserve all existing intelligence (variation, modification, special effects)
+- Commented out redundant primitives (Hill=Mountain config, Mound=tiny Mountain, etc.)
+- Focus on geological storytelling through intelligent primitive use
+"""
 from abc import ABC, abstractmethod
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Union
 import numpy as np
 from ..engine.stamping import BlendingMode
 
+# Type-aware imports (bridge pattern)
+try:
+    from ..domain.models import Feature
+    FEATURE_TYPE_AVAILABLE = True
+except ImportError:
+    FEATURE_TYPE_AVAILABLE = False
+    Feature = None  # type: ignore
+
+# Bridge type: Accept both dict and Feature during migration
+if FEATURE_TYPE_AVAILABLE:
+    FeatureInput = Union[Feature, Dict]
+else:
+    FeatureInput = Dict
+
 
 class FeatureGenerator(ABC):
-    """Base class for feature generators."""
+    """
+    Base class for feature generators.
+    
+    MIGRATION NOTE: Now supports both dict and typed Feature during transition.
+    Subclasses can override generate_stamp() to work directly with Feature,
+    or use the bridge helpers (_to_dict, _to_feature) for gradual migration.
+    """
+    
+    # Helper methods for bridge pattern
+    def _to_dict(self, feature: FeatureInput) -> Dict:
+        """Convert Feature → dict if needed (bridge helper)."""
+        if FEATURE_TYPE_AVAILABLE and isinstance(feature, Feature):
+            return feature.to_dict()
+        return feature
+    
+    def _to_feature(self, feature_dict: Dict) -> 'Feature':
+        """Convert dict → Feature if needed (bridge helper)."""
+        if not FEATURE_TYPE_AVAILABLE:
+            raise RuntimeError("Feature type not available - cannot convert")
+        return Feature.from_dict(feature_dict)
     
     @abstractmethod
-    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+    def generate_stamp(self, feature: FeatureInput, seed: int) -> np.ndarray:
         """
         Generate heightmap stamp for this feature.
         
+        MIGRATION NOTE: Now accepts BOTH dict and typed Feature.
+        Use self._to_dict(feature) to convert to dict if needed.
+        
         Args:
-            feat: Feature dictionary with parameters
+            feature: Feature instance OR dict (legacy support during migration)
             seed: Random seed
             
         Returns:
@@ -37,13 +89,12 @@ class FeatureGenerator(ABC):
         """
         pass
     
-    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
+    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int):
         """
-        Create feature dictionary with modifiers and variation.
+        Create feature with modifiers and variation.
         
-        Default implementation: subclasses can override for custom logic.
-        Most features don't need to override this - they just need to implement
-        get_defaults() and the creation will be handled generically.
+        MIGRATION NOTE: Returns typed Feature (not dict anymore).
+        Subclasses now implement _create_feature_dict() instead.
         
         Args:
             cx, cy: Center coordinates
@@ -51,10 +102,36 @@ class FeatureGenerator(ABC):
             seed: Random seed for variation
             
         Returns:
-            Feature dictionary ready for terrain generation
+            Typed Feature instance (new) or dict (legacy during migration)
         """
-        # Default: return None to indicate "use terrain.py _create_feature() instead"
-        # Subclasses override to provide custom creation logic
+        # Try subclass-specific logic first
+        feat_dict = self._create_feature_dict(cx, cy, modifiers, seed)
+        
+        if feat_dict is None:
+            # No custom logic - return None (terrain.py will handle it)
+            return None
+        
+        # Ensure dict has required 'id' field for Feature.from_dict
+        if "id" not in feat_dict:
+            feat_dict["id"] = 0  # Temporary ID, will be assigned by state manager
+        
+        # Convert dict → typed Feature
+        if FEATURE_TYPE_AVAILABLE:
+            return self._to_feature(feat_dict)
+        else:
+            # Fallback if Feature type not available
+            return feat_dict
+    
+    def _create_feature_dict(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Optional[Dict]:
+        """
+        Internal helper: Create feature dict with variation logic.
+        
+        Subclasses override this to preserve existing variation intelligence.
+        Base implementation returns None (no custom logic).
+        
+        Returns:
+            Feature dict or None (if no custom logic)
+        """
         return None
     
     def modify_feature(self, feat: Dict, modifiers: Dict):
@@ -92,7 +169,10 @@ class FeatureGenerator(ABC):
 # ============================================================================
 
 class MountainGenerator(FeatureGenerator):
-    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+    def generate_stamp(self, feature: FeatureInput, seed: int) -> np.ndarray:
+        # Bridge: Convert to dict if needed (preserves existing logic)
+        feat = self._to_dict(feature)
+        
         from ..primitives.mountains import generate_mountain
         cx, cy = feat["x"], feat["y"]
         radius = feat.get("radius", 56)
@@ -106,8 +186,8 @@ class MountainGenerator(FeatureGenerator):
     def get_defaults(self) -> Dict:
         return {"radius": 56, "height": 0.75, "use_noise": True}
     
-    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
-        """Create mountain with modifiers and variation."""
+    def _create_feature_dict(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
+        """Create mountain dict with variation (called by base create_feature)."""
         from ..engine.variation import VARIATION_CONFIG
         from ..terrain import _apply_param_modifier_or_variation
         
@@ -131,45 +211,51 @@ class MountainGenerator(FeatureGenerator):
         apply_modifier_to_param(feat, "radius", modifiers, max_value=128, is_int=True)
 
 
-class HillGenerator(FeatureGenerator):
-    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
-        from ..primitives.mountains import generate_mountain
-        cx, cy = feat["x"], feat["y"]
-        radius = feat.get("radius", 42)
-        height = feat.get("height", 0.45)
-        use_noise = feat.get("use_noise", True)
-        # Hills use gentler steepness
-        return generate_mountain(cx, cy, radius, height, steepness=0.7, use_noise=use_noise, seed=seed)
-    
-    def get_blending_mode(self) -> BlendingMode:
-        return BlendingMode.MAX
-    
-    def get_defaults(self) -> Dict:
-        return {"radius": 42, "height": 0.45, "use_noise": True}
-    
-    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
-        """Create hill with modifiers and variation."""
-        from ..engine.variation import VARIATION_CONFIG
-        from ..terrain import _apply_param_modifier_or_variation
-        
-        cfg = VARIATION_CONFIG["hill"]
-        variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
-        
-        height = _apply_param_modifier_or_variation(
-            0.45, modifiers, "height", "taller", cfg, variation_seed
-        )
-        radius = _apply_param_modifier_or_variation(
-            42, modifiers, "radius", "wider", cfg, variation_seed + 1, is_int=True
-        )
-        
-        return {"type": "hill", "x": cx, "y": cy, "radius": radius, "height": height,
-                "use_noise": True}
-    
-    def modify_feature(self, feat: Dict, modifiers: Dict):
-        """Modify hill parameters."""
-        from ..engine.modification import apply_modifier_to_param
-        apply_modifier_to_param(feat, "height", modifiers, max_value=1.0)
-        apply_modifier_to_param(feat, "radius", modifiers, max_value=128, is_int=True)
+# ============================================================================
+# COMMENTED OUT: Redundant with Mountain
+# ============================================================================
+# Hills are just Mountain(steepness=0.7). Use Mountain with lower height instead.
+# Keeping code for reference but not registering as core primitive.
+#
+# class HillGenerator(FeatureGenerator):
+#     def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+#         from ..primitives.mountains import generate_mountain
+#         cx, cy = feat["x"], feat["y"]
+#         radius = feat.get("radius", 42)
+#         height = feat.get("height", 0.45)
+#         use_noise = feat.get("use_noise", True)
+#         # Hills use gentler steepness
+#         return generate_mountain(cx, cy, radius, height, steepness=0.7, use_noise=use_noise, seed=seed)
+#     
+#     def get_blending_mode(self) -> BlendingMode:
+#         return BlendingMode.MAX
+#     
+#     def get_defaults(self) -> Dict:
+#         return {"radius": 42, "height": 0.45, "use_noise": True}
+#     
+#     def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
+#         """Create hill with modifiers and variation."""
+#         from ..engine.variation import VARIATION_CONFIG
+#         from ..terrain import _apply_param_modifier_or_variation
+#         
+#         cfg = VARIATION_CONFIG["hill"]
+#         variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
+#         
+#         height = _apply_param_modifier_or_variation(
+#             0.45, modifiers, "height", "taller", cfg, variation_seed
+#         )
+#         radius = _apply_param_modifier_or_variation(
+#             42, modifiers, "radius", "wider", cfg, variation_seed + 1, is_int=True
+#         )
+#         
+#         return {"type": "hill", "x": cx, "y": cy, "radius": radius, "height": height,
+#                 "use_noise": True}
+#     
+#     def modify_feature(self, feat: Dict, modifiers: Dict):
+#         """Modify hill parameters."""
+#         from ..engine.modification import apply_modifier_to_param
+#         apply_modifier_to_param(feat, "height", modifiers, max_value=1.0)
+#         apply_modifier_to_param(feat, "radius", modifiers, max_value=128, is_int=True)
 
 
 class MesaGenerator(FeatureGenerator):
@@ -206,7 +292,10 @@ class MesaGenerator(FeatureGenerator):
 
 
 class PlateauGenerator(FeatureGenerator):
-    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+    def generate_stamp(self, feature: FeatureInput, seed: int) -> np.ndarray:
+        # Bridge: Convert to dict if needed (preserves existing logic)
+        feat = self._to_dict(feature)
+        
         from ..primitives.mountains import generate_plateau
         cx, cy = feat["x"], feat["y"]
         width = feat.get("width", 80)
@@ -221,8 +310,8 @@ class PlateauGenerator(FeatureGenerator):
     def get_defaults(self) -> Dict:
         return {"width": 80, "length": 120, "height": 0.50, "orientation": 0.0}
     
-    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
-        """Create plateau with variation."""
+    def _create_feature_dict(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
+        """Create plateau dict with variation (called by base create_feature)."""
         from ..engine.variation import VariationEngine
         variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
         
@@ -242,7 +331,10 @@ class PlateauGenerator(FeatureGenerator):
 
 
 class ValleyGenerator(FeatureGenerator):
-    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+    def generate_stamp(self, feature: FeatureInput, seed: int) -> np.ndarray:
+        # Bridge: Convert to dict if needed (preserves existing logic)
+        feat = self._to_dict(feature)
+        
         from ..primitives.valleys import generate_valley
         cx, cy = feat["x"], feat["y"]
         radius = feat.get("radius", 64)
@@ -255,8 +347,8 @@ class ValleyGenerator(FeatureGenerator):
     def get_defaults(self) -> Dict:
         return {"radius": 64, "depth": 0.55}
     
-    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
-        """Create valley with modifiers and variation."""
+    def _create_feature_dict(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
+        """Create valley dict with variation (called by base create_feature)."""
         from ..engine.variation import VARIATION_CONFIG
         from ..terrain import _apply_param_modifier_or_variation
         
@@ -280,7 +372,10 @@ class ValleyGenerator(FeatureGenerator):
 
 
 class CliffGenerator(FeatureGenerator):
-    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+    def generate_stamp(self, feature: FeatureInput, seed: int) -> np.ndarray:
+        # Bridge: Convert to dict if needed (preserves existing logic)
+        feat = self._to_dict(feature)
+        
         from ..primitives.cliffs import generate_cliff
         cx, cy = feat["x"], feat["y"]
         length = feat.get("length", 80)
@@ -295,8 +390,8 @@ class CliffGenerator(FeatureGenerator):
     def get_defaults(self) -> Dict:
         return {"length": 80, "height": 0.55, "orientation": 0.0, "steepness": 0.9}
     
-    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
-        """Create cliff with variation."""
+    def _create_feature_dict(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
+        """Create cliff dict with variation (called by base create_feature)."""
         from ..engine.variation import VariationEngine
         variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
         
@@ -411,102 +506,115 @@ class VolcanoGenerator(FeatureGenerator):
         apply_modifier_to_param(feat, "base_radius", modifiers, max_value=128, is_int=True)
 
 
-class MoundGenerator(FeatureGenerator):
-    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
-        from ..primitives.mound import generate_mound
-        cx, cy = feat["x"], feat["y"]
-        radius = feat.get("radius", 25)
-        height = feat.get("height", 0.20)
-        use_noise = feat.get("use_noise", True)
-        return generate_mound(cx, cy, radius, height, use_noise, seed)
-    
-    def get_blending_mode(self) -> BlendingMode:
-        return BlendingMode.MAX
-    
-    def get_defaults(self) -> Dict:
-        return {"radius": 25, "height": 0.20, "use_noise": True}
-    
-    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
-        """Create mound with variation."""
-        from ..engine.variation import VariationEngine
-        variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
-        
-        height = VariationEngine.apply_variation(0.20, 0.15, variation_seed, 0.12, 0.28)
-        radius = VariationEngine.apply_variation_int(25, 0.20, variation_seed + 1, 18, 35)
-        
-        return {"type": "mound", "x": cx, "y": cy, "radius": radius, "height": height}
-    
-    def modify_feature(self, feat: Dict, modifiers: Dict):
-        """Modify mound parameters."""
-        from ..engine.modification import apply_modifier_to_param
-        apply_modifier_to_param(feat, "height", modifiers, max_value=1.0)
-        apply_modifier_to_param(feat, "radius", modifiers, max_value=128, is_int=True)
+# ============================================================================
+# COMMENTED OUT: Redundant with Mountain and Valley
+# ============================================================================
+# Mound is just Mountain(height=0.20, radius=25) - literally same gaussian code!
+# Basin is just Valley(large, with flat_bottom option).
+# Use Mountain/Valley with appropriate parameters instead.
+#
+# class MoundGenerator(FeatureGenerator):
+#     def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+#         from ..primitives.mound import generate_mound
+#         cx, cy = feat["x"], feat["y"]
+#         radius = feat.get("radius", 25)
+#         height = feat.get("height", 0.20)
+#         use_noise = feat.get("use_noise", True)
+#         return generate_mound(cx, cy, radius, height, use_noise, seed)
+#     
+#     def get_blending_mode(self) -> BlendingMode:
+#         return BlendingMode.MAX
+#     
+#     def get_defaults(self) -> Dict:
+#         return {"radius": 25, "height": 0.20, "use_noise": True}
+#     
+#     def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
+#         """Create mound with variation."""
+#         from ..engine.variation import VariationEngine
+#         variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
+#         
+#         height = VariationEngine.apply_variation(0.20, 0.15, variation_seed, 0.12, 0.28)
+#         radius = VariationEngine.apply_variation_int(25, 0.20, variation_seed + 1, 18, 35)
+#         
+#         return {"type": "mound", "x": cx, "y": cy, "radius": radius, "height": height}
+#     
+#     def modify_feature(self, feat: Dict, modifiers: Dict):
+#         """Modify mound parameters."""
+#         from ..engine.modification import apply_modifier_to_param
+#         apply_modifier_to_param(feat, "height", modifiers, max_value=1.0)
+#         apply_modifier_to_param(feat, "radius", modifiers, max_value=128, is_int=True)
 
 
-class BasinGenerator(FeatureGenerator):
-    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
-        from ..primitives.basin import generate_basin
-        cx, cy = feat["x"], feat["y"]
-        radius = feat.get("radius", 120)
-        depth = feat.get("depth", 0.50)
-        flatness = feat.get("flatness", 0.5)
-        return generate_basin(cx, cy, radius, depth, flatness)
-    
-    def get_blending_mode(self) -> BlendingMode:
-        return BlendingMode.SUBTRACT
-    
-    def get_defaults(self) -> Dict:
-        return {"radius": 120, "depth": 0.50, "flatness": 0.5}
-    
-    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
-        """Create basin with variation."""
-        from ..engine.variation import VariationEngine
-        variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
-        
-        depth = VariationEngine.apply_variation(0.50, 0.10, variation_seed, 0.35, 0.65)
-        radius = VariationEngine.apply_variation_int(120, 0.15, variation_seed + 1, 90, 150)
-        flatness = VariationEngine.apply_variation(0.5, 0.20, variation_seed + 2, 0.3, 0.7)
-        
-        return {"type": "basin", "x": cx, "y": cy, "radius": radius, "depth": depth, "flatness": flatness}
-    
-    def modify_feature(self, feat: Dict, modifiers: Dict):
-        """Modify basin parameters."""
-        from ..engine.modification import apply_modifier_to_param
-        apply_modifier_to_param(feat, "depth", modifiers, max_value=1.0, modifier_keyword="deeper")
-        apply_modifier_to_param(feat, "radius", modifiers, max_value=128, is_int=True)
+# class BasinGenerator(FeatureGenerator):
+#     def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+#         from ..primitives.basin import generate_basin
+#         cx, cy = feat["x"], feat["y"]
+#         radius = feat.get("radius", 120)
+#         depth = feat.get("depth", 0.50)
+#         flatness = feat.get("flatness", 0.5)
+#         return generate_basin(cx, cy, radius, depth, flatness)
+#     
+#     def get_blending_mode(self) -> BlendingMode:
+#         return BlendingMode.SUBTRACT
+#     
+#     def get_defaults(self) -> Dict:
+#         return {"radius": 120, "depth": 0.50, "flatness": 0.5}
+#     
+#     def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
+#         """Create basin with variation."""
+#         from ..engine.variation import VariationEngine
+#         variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
+#         
+#         depth = VariationEngine.apply_variation(0.50, 0.10, variation_seed, 0.35, 0.65)
+#         radius = VariationEngine.apply_variation_int(120, 0.15, variation_seed + 1, 90, 150)
+#         flatness = VariationEngine.apply_variation(0.5, 0.20, variation_seed + 2, 0.3, 0.7)
+#         
+#         return {"type": "basin", "x": cx, "y": cy, "radius": radius, "depth": depth, "flatness": flatness}
+#     
+#     def modify_feature(self, feat: Dict, modifiers: Dict):
+#         """Modify basin parameters."""
+#         from ..engine.modification import apply_modifier_to_param
+#         apply_modifier_to_param(feat, "depth", modifiers, max_value=1.0, modifier_keyword="deeper")
+#         apply_modifier_to_param(feat, "radius", modifiers, max_value=128, is_int=True)
 
 
-class PinnacleGenerator(FeatureGenerator):
-    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
-        from ..primitives.pinnacle import generate_pinnacle
-        cx, cy = feat["x"], feat["y"]
-        radius = feat.get("radius", 20)
-        height = feat.get("height", 0.90)
-        steepness = feat.get("steepness", 2.0)
-        use_noise = feat.get("use_noise", True)
-        return generate_pinnacle(cx, cy, radius, height, steepness, use_noise, seed)
-    
-    def get_blending_mode(self) -> BlendingMode:
-        return BlendingMode.MAX
-    
-    def get_defaults(self) -> Dict:
-        return {"radius": 20, "height": 0.90, "steepness": 2.0, "use_noise": True}
-    
-    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
-        """Create pinnacle with variation."""
-        from ..engine.variation import VariationEngine
-        variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
-        
-        height = VariationEngine.apply_variation(0.90, 0.08, variation_seed, 0.75, 1.0)
-        radius = VariationEngine.apply_variation_int(20, 0.20, variation_seed + 1, 15, 28)
-        
-        return {"type": "pinnacle", "x": cx, "y": cy, "radius": radius, "height": height, "steepness": 2.0}
-    
-    def modify_feature(self, feat: Dict, modifiers: Dict):
-        """Modify pinnacle parameters."""
-        from ..engine.modification import apply_modifier_to_param
-        apply_modifier_to_param(feat, "height", modifiers, max_value=1.0)
-        apply_modifier_to_param(feat, "radius", modifiers, max_value=128, is_int=True)
+# ============================================================================
+# COMMENTED OUT: Redundant with Mountain
+# ============================================================================
+# Pinnacle is just Mountain(radius=20, height=0.90, steepness=2.0) - extreme params.
+# Use Mountain with small radius and high steepness instead.
+#
+# class PinnacleGenerator(FeatureGenerator):
+#     def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+#         from ..primitives.pinnacle import generate_pinnacle
+#         cx, cy = feat["x"], feat["y"]
+#         radius = feat.get("radius", 20)
+#         height = feat.get("height", 0.90)
+#         steepness = feat.get("steepness", 2.0)
+#         use_noise = feat.get("use_noise", True)
+#         return generate_pinnacle(cx, cy, radius, height, steepness, use_noise, seed)
+#     
+#     def get_blending_mode(self) -> BlendingMode:
+#         return BlendingMode.MAX
+#     
+#     def get_defaults(self) -> Dict:
+#         return {"radius": 20, "height": 0.90, "steepness": 2.0, "use_noise": True}
+#     
+#     def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
+#         """Create pinnacle with variation."""
+#         from ..engine.variation import VariationEngine
+#         variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
+#         
+#         height = VariationEngine.apply_variation(0.90, 0.08, variation_seed, 0.75, 1.0)
+#         radius = VariationEngine.apply_variation_int(20, 0.20, variation_seed + 1, 15, 28)
+#         
+#         return {"type": "pinnacle", "x": cx, "y": cy, "radius": radius, "height": height, "steepness": 2.0}
+#     
+#     def modify_feature(self, feat: Dict, modifiers: Dict):
+#         """Modify pinnacle parameters."""
+#         from ..engine.modification import apply_modifier_to_param
+#         apply_modifier_to_param(feat, "height", modifiers, max_value=1.0)
+#         apply_modifier_to_param(feat, "radius", modifiers, max_value=128, is_int=True)
 
 
 # ============================================================================
@@ -514,7 +622,10 @@ class PinnacleGenerator(FeatureGenerator):
 # ============================================================================
 
 class CanyonGenerator(FeatureGenerator):
-    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+    def generate_stamp(self, feature: FeatureInput, seed: int) -> np.ndarray:
+        # Bridge: Convert to dict if needed (preserves existing logic)
+        feat = self._to_dict(feature)
+        
         from ..primitives.valleys import generate_canyon
         start = (feat["x0"], feat["y0"])
         end = (feat["x1"], feat["y1"])
@@ -551,80 +662,88 @@ class CanyonGenerator(FeatureGenerator):
         apply_modifier_to_param(feat, "width", modifiers, max_value=128, is_int=True)
 
 
-class RidgeGenerator(FeatureGenerator):
-    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
-        from ..primitives.ridge import generate_ridge
-        start = (feat["x0"], feat["y0"])
-        end = (feat["x1"], feat["y1"])
-        width = feat.get("width", 20)
-        height = feat.get("height", 0.50)
-        steepness = feat.get("steepness", 0.8)
-        return generate_ridge(start, end, height, width, steepness)
-    
-    def get_blending_mode(self) -> BlendingMode:
-        return BlendingMode.MAX
-    
-    def get_defaults(self) -> Dict:
-        return {"width": 20, "height": 0.50, "steepness": 0.8}
-    
-    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
-        """Create ridge with variation."""
-        from ..engine.variation import VariationEngine
-        variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
-        
-        length = VariationEngine.apply_variation_int(120, 0.20, variation_seed, 80, 180)
-        width = VariationEngine.apply_variation_int(20, 0.15, variation_seed + 1, 15, 30)
-        height = VariationEngine.apply_variation(0.50, 0.10, variation_seed + 2, 0.35, 0.65)
-        
-        from ..terrain import _generate_linear_feature_coords
-        start, end = _generate_linear_feature_coords(cx, cy, length, variation_seed + 3)
-        
-        return {"type": "ridge", "x0": start[0], "y0": start[1], "x1": end[0], "y1": end[1],
-                "width": width, "height": height, "steepness": 0.8}
-    
-    def modify_feature(self, feat: Dict, modifiers: Dict):
-        """Modify ridge parameters."""
-        from ..engine.modification import apply_modifier_to_param
-        apply_modifier_to_param(feat, "height", modifiers, max_value=1.0)
-        apply_modifier_to_param(feat, "width", modifiers, max_value=128, is_int=True)
+# ============================================================================
+# COMMENTED OUT: Ridge is ugly, Ravine is redundant with Canyon
+# ============================================================================
+# Ridge: Too smooth (slope ~0.15-0.25) → Creates GRASS not rock. No cliff_mask.
+#        Use Cliff instead for dramatic vertical features with rock texture.
+# Ravine: Just Canyon(width=7, steepness=1.2) - narrow canyon config.
+#         Use Canyon with small width instead.
+#
+# class RidgeGenerator(FeatureGenerator):
+#     def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+#         from ..primitives.ridge import generate_ridge
+#         start = (feat["x0"], feat["y0"])
+#         end = (feat["x1"], feat["y1"])
+#         width = feat.get("width", 20)
+#         height = feat.get("height", 0.50)
+#         steepness = feat.get("steepness", 0.8)
+#         return generate_ridge(start, end, height, width, steepness)
+#     
+#     def get_blending_mode(self) -> BlendingMode:
+#         return BlendingMode.MAX
+#     
+#     def get_defaults(self) -> Dict:
+#         return {"width": 20, "height": 0.50, "steepness": 0.8}
+#     
+#     def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
+#         """Create ridge with variation."""
+#         from ..engine.variation import VariationEngine
+#         variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
+#         
+#         length = VariationEngine.apply_variation_int(120, 0.20, variation_seed, 80, 180)
+#         width = VariationEngine.apply_variation_int(20, 0.15, variation_seed + 1, 15, 30)
+#         height = VariationEngine.apply_variation(0.50, 0.10, variation_seed + 2, 0.35, 0.65)
+#         
+#         from ..terrain import _generate_linear_feature_coords
+#         start, end = _generate_linear_feature_coords(cx, cy, length, variation_seed + 3)
+#         
+#         return {"type": "ridge", "x0": start[0], "y0": start[1], "x1": end[0], "y1": end[1],
+#                 "width": width, "height": height, "steepness": 0.8}
+#     
+#     def modify_feature(self, feat: Dict, modifiers: Dict):
+#         """Modify ridge parameters."""
+#         from ..engine.modification import apply_modifier_to_param
+#         apply_modifier_to_param(feat, "height", modifiers, max_value=1.0)
+#         apply_modifier_to_param(feat, "width", modifiers, max_value=128, is_int=True)
 
 
-class RavineGenerator(FeatureGenerator):
-    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
-        from ..primitives.ravine import generate_ravine
-        start = (feat["x0"], feat["y0"])
-        end = (feat["x1"], feat["y1"])
-        width = feat.get("width", 7)
-        depth = feat.get("depth", 0.60)
-        steepness = feat.get("steepness", 1.2)
-        return generate_ravine(start, end, width, depth, steepness)
-    
-    def get_blending_mode(self) -> BlendingMode:
-        return BlendingMode.SUBTRACT
-    
-    def get_defaults(self) -> Dict:
-        return {"width": 7, "depth": 0.60, "steepness": 1.2}
-    
-    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
-        """Create ravine with variation."""
-        from ..engine.variation import VariationEngine
-        variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
-        
-        length = VariationEngine.apply_variation_int(100, 0.20, variation_seed, 60, 150)
-        width = VariationEngine.apply_variation_int(7, 0.15, variation_seed + 1, 5, 10)
-        depth = VariationEngine.apply_variation(0.60, 0.10, variation_seed + 2, 0.45, 0.75)
-        
-        from ..terrain import _generate_linear_feature_coords
-        start, end = _generate_linear_feature_coords(cx, cy, length, variation_seed + 3)
-        
-        return {"type": "ravine", "x0": start[0], "y0": start[1], "x1": end[0], "y1": end[1],
-                "width": width, "depth": depth, "steepness": 1.2}
-    
-    def modify_feature(self, feat: Dict, modifiers: Dict):
-        """Modify ravine parameters."""
-        from ..engine.modification import apply_modifier_to_param
-        apply_modifier_to_param(feat, "depth", modifiers, max_value=1.0, modifier_keyword="deeper")
-        apply_modifier_to_param(feat, "width", modifiers, max_value=128, is_int=True)
+# class RavineGenerator(FeatureGenerator):
+#     def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+#         from ..primitives.ravine import generate_ravine
+#         start = (feat["x0"], feat["y0"])
+#         end = (feat["x1"], feat["y1"])
+#         width = feat.get("width", 7)
+#         depth = feat.get("depth", 0.60)
+#         steepness = feat.get("steepness", 1.2)
+#         return generate_ravine(start, end, width, depth, steepness)
+#     
+#     def get_blending_mode(self) -> BlendingMode:
+#         return BlendingMode.SUBTRACT
+#     
+#     def get_defaults(self) -> Dict:
+#         return {"width": 7, "depth": 0.60, "steepness": 1.2}
+#     
+#     def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
+#         """Create ravine with variation."""
+#         from ..engine.variation import VariationEngine
+#         variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
+#         
+#         length = VariationEngine.apply_variation_int(100, 0.20, variation_seed, 60, 150)
+#         width = VariationEngine.apply_variation_int(7, 0.15, variation_seed + 1, 5, 10)
+#         depth = VariationEngine.apply_variation(0.60, 0.10, variation_seed + 2, 0.45, 0.75)
+#         
+#         from ..terrain import _generate_linear_feature_coords
+#         start, end = _generate_linear_feature_coords(cx, cy, length, variation_seed + 3)
+#         
+#         return {"type": "ravine", "x0": start[0], "y0": start[1], "x1": end[0], "y1": end[1],
+#                 "width": width, "depth": depth, "steepness": 1.2}
+#     
+#     def modify_feature(self, feat: Dict, modifiers: Dict):
+#         """Modify ravine parameters."""
+#         from ..engine.modification import apply_modifier_to_param
+#         apply_modifier_to_param(feat, "depth", modifiers, max_value=1.0, modifier_keyword="deeper")
+#         apply_modifier_to_param(feat, "width", modifiers, max_value=128, is_int=True)
 
 
 class PassGenerator(FeatureGenerator):
@@ -709,7 +828,10 @@ class SpurGenerator(FeatureGenerator):
 # ============================================================================
 
 class DunesGenerator(FeatureGenerator):
-    def generate_stamp(self, feat: Dict, seed: int) -> np.ndarray:
+    def generate_stamp(self, feature: FeatureInput, seed: int) -> np.ndarray:
+        # Bridge: Convert to dict if needed (preserves existing logic)
+        feat = self._to_dict(feature)
+        
         from ..primitives.dunes import generate_dunes
         box = (feat["x0"], feat["y0"], feat["x1"], feat["y1"])
         amp = feat.get("amp", 0.08)
@@ -723,8 +845,8 @@ class DunesGenerator(FeatureGenerator):
     def get_defaults(self) -> Dict:
         return {"amp": 0.08, "freq": 18.0, "angle": 20.0}
     
-    def create_feature(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
-        """Create dunes with variation."""
+    def _create_feature_dict(self, cx: int, cy: int, modifiers: Dict, seed: int) -> Dict:
+        """Create dunes dict with variation (called by base create_feature)."""
         from ..engine.variation import VariationEngine, VARIATION_CONFIG
         cfg = VARIATION_CONFIG["dunes"]
         variation_seed = (hash(f"{cx}_{cy}_{seed}") % (2**31))
@@ -738,7 +860,8 @@ class DunesGenerator(FeatureGenerator):
         from ..terrain import _generate_bounding_box
         x0, y0, x1, y1 = _generate_bounding_box(cx, cy, radius)
         
-        return {"type": "dunes", "x0": x0, "y0": y0, "x1": x1, "y1": y1,
+        # Include center position (x, y) for Feature.from_dict compatibility
+        return {"type": "dunes", "x": cx, "y": cy, "x0": x0, "y0": y0, "x1": x1, "y1": y1,
                 "amp": amp, "freq": freq, "angle": angle}
     
     def modify_feature(self, feat: Dict, modifiers: Dict):
@@ -1093,14 +1216,18 @@ class FeatureRegistry:
         return feature_type in cls._generators
     
     @classmethod
-    def generate_stamp(cls, feature_type: str, feat: Dict, seed: int) -> np.ndarray:
+    def generate_stamp(cls, feature_or_type, feat_or_seed=None, seed_or_none=None) -> np.ndarray:
         """
         Generate heightmap stamp for a feature.
         
+        MIGRATION NOTE: Supports both old and new calling conventions:
+        - Old: generate_stamp("mountain", {"x": 256, "y": 256, ...}, 42)
+        - New: generate_stamp(Feature(...), 42)
+        
         Args:
-            feature_type: Type of feature (e.g., "mountain", "ridge")
-            feat: Feature dictionary with parameters
-            seed: Random seed
+            feature_or_type: Either Feature instance (new) or feature_type string (old)
+            feat_or_seed: Either seed (new) or feature dict (old)
+            seed_or_none: Either seed (old) or None (new)
             
         Returns:
             512x512 heightmap stamp
@@ -1108,11 +1235,23 @@ class FeatureRegistry:
         Raises:
             ValueError: If feature type is not registered
         """
+        # Determine calling convention
+        if FEATURE_TYPE_AVAILABLE and isinstance(feature_or_type, Feature):
+            # New convention: generate_stamp(Feature(...), seed)
+            feature = feature_or_type
+            seed = feat_or_seed
+            feature_type = feature.type
+        else:
+            # Old convention: generate_stamp("mountain", {...}, seed)
+            feature_type = feature_or_type
+            feature = feat_or_seed
+            seed = seed_or_none
+        
         generator = cls._generators.get(feature_type)
         if not generator:
             raise ValueError(f"Unknown feature type: '{feature_type}'. "
                            f"Registered types: {list(cls._generators.keys())}")
-        return generator.generate_stamp(feat, seed)
+        return generator.generate_stamp(feature, seed)
     
     @classmethod
     def get_blending_mode(cls, feature_type: str) -> BlendingMode:
@@ -1193,31 +1332,51 @@ class FeatureRegistry:
 # ============================================================================
 
 def _register_all_generators():
-    """Register all feature generators."""
-    FeatureRegistry.register("mountain", MountainGenerator())
-    FeatureRegistry.register("hill", HillGenerator())
-    FeatureRegistry.register("mesa", MesaGenerator())
-    FeatureRegistry.register("plateau", PlateauGenerator())
-    FeatureRegistry.register("valley", ValleyGenerator())
-    FeatureRegistry.register("cliff", CliffGenerator())
-    FeatureRegistry.register("canyon", CanyonGenerator())
-    FeatureRegistry.register("slope", SlopeGenerator())
-    FeatureRegistry.register("crater", CraterGenerator())
-    FeatureRegistry.register("ridge", RidgeGenerator())
-    FeatureRegistry.register("ravine", RavineGenerator())
-    FeatureRegistry.register("volcano", VolcanoGenerator())
-    FeatureRegistry.register("pass", PassGenerator())
-    FeatureRegistry.register("mound", MoundGenerator())
-    FeatureRegistry.register("basin", BasinGenerator())
-    FeatureRegistry.register("pinnacle", PinnacleGenerator())
-    FeatureRegistry.register("spur", SpurGenerator())
-    FeatureRegistry.register("dunes", DunesGenerator())
-    FeatureRegistry.register("terraces", TerracesGenerator())
-    # Walkability zones
+    """
+    Register feature generators.
+    
+    CORE 6 PRIMITIVES (Focus for geological narratives):
+    - Mountain, Valley, Dunes, Cliff, Plateau, Canyon
+    
+    REFACTORING NOTES:
+    - Commented out redundant primitives (Hill, Mound, Pinnacle = Mountain configs)
+    - Commented out ugly primitives (Ridge = too smooth, no cliff_mask)
+    - Keeping specialized primitives for specific use cases but not promoting to core
+    """
+    
+    # ========== CORE 6 PRIMITIVES (Essential for geological storytelling) ==========
+    FeatureRegistry.register("mountain", MountainGenerator())  # Hero elevation (rock + snow)
+    FeatureRegistry.register("valley", ValleyGenerator())      # Hero depression (grass + balance)
+    FeatureRegistry.register("dunes", DunesGenerator())        # Sand texture (ONLY source via dune_mask)
+    FeatureRegistry.register("cliff", CliffGenerator())        # Vertical drama (rock via cliff_mask)
+    FeatureRegistry.register("plateau", PlateauGenerator())    # Flat zones (gameplay + unique geometry)
+    FeatureRegistry.register("canyon", CanyonGenerator())      # Linear exploration (water stories)
+    
+    # ========== COMMENTED OUT: Redundant Primitives ==========
+    # Use Mountain/Valley/Canyon with appropriate parameters instead
+    # FeatureRegistry.register("hill", HillGenerator())        # ❌ Just Mountain(steepness=0.7)
+    # FeatureRegistry.register("mound", MoundGenerator())      # ❌ Just Mountain(height=0.20, radius=25)
+    # FeatureRegistry.register("pinnacle", PinnacleGenerator())  # ❌ Just Mountain(radius=20, steepness=2.0)
+    # FeatureRegistry.register("basin", BasinGenerator())      # ❌ Just Valley(large, flat_bottom)
+    # FeatureRegistry.register("ravine", RavineGenerator())    # ❌ Just Canyon(narrow)
+    # FeatureRegistry.register("ridge", RidgeGenerator())      # ❌ Ugly (too smooth, no rock), use Cliff
+    
+    # ========== SPECIALIZED PRIMITIVES (Kept for specific use cases) ==========
+    # These are more niche but can be useful for specific narratives
+    FeatureRegistry.register("mesa", MesaGenerator())          # Flat-top mountain variant
+    FeatureRegistry.register("crater", CraterGenerator())      # Composite (rim + depression)
+    FeatureRegistry.register("volcano", VolcanoGenerator())    # Mountain + crater combo
+    FeatureRegistry.register("slope", SlopeGenerator())        # Utility: gradual inclines
+    FeatureRegistry.register("pass", PassGenerator())          # Utility: mountain passages
+    FeatureRegistry.register("spur", SpurGenerator())          # Utility: mountain extensions
+    FeatureRegistry.register("terraces", TerracesGenerator())  # Specialized: stepped levels
+    
+    # ========== WALKABILITY ZONES (Gameplay/utility features) ==========
     FeatureRegistry.register("flat_zone", FlatZoneGenerator())
     FeatureRegistry.register("path", PathGenerator())
     FeatureRegistry.register("clearing", ClearingGenerator())
-    # Forest-specific primitives
+    
+    # ========== FOREST-SPECIFIC (Biome-specific features) ==========
     FeatureRegistry.register("grove", GroveGenerator())
     FeatureRegistry.register("forest_hill", ForestHillGenerator())
     FeatureRegistry.register("forest_clearing", ForestClearingGenerator())

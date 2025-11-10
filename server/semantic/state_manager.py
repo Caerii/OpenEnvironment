@@ -1,6 +1,14 @@
 """State management - Feature tracking and terrain state."""
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 import json
+
+# Import Feature type for bridge pattern
+try:
+    from ..domain.models import Feature
+    FEATURE_TYPE_AVAILABLE = True
+except ImportError:
+    FEATURE_TYPE_AVAILABLE = False
+    Feature = None  # type: ignore
 
 class FeatureState:
     """Manages terrain feature state with IDs and tracking."""
@@ -21,19 +29,38 @@ class FeatureState:
                     max_id = max(max_id, feat["id"])
             self.state["next_id"] = max_id + 1
     
-    def add_feature(self, feature: Dict) -> int:
+    def add_feature(self, feature: Union['Feature', Dict]) -> int:
         """
         Add a feature with auto-assigned ID.
         
+        BRIDGE PATTERN: Accepts both typed Feature and dict during migration.
+        
         Args:
-            feature: Feature dictionary (type, position, params, etc.)
+            feature: Feature instance (typed) or dictionary (legacy)
             
         Returns:
             Assigned feature ID
         """
+        # Convert Feature → dict if needed
+        # Check for Feature type by duck typing (has to_dict method)
+        if hasattr(feature, 'to_dict') and callable(getattr(feature, 'to_dict')):
+            # It's a Feature instance
+            feature_dict = feature.to_dict()
+        elif isinstance(feature, dict):
+            # Make a copy to avoid modifying original
+            feature_dict = feature.copy()
+        else:
+            # Fallback: try to convert
+            try:
+                feature_dict = dict(feature)
+            except (TypeError, ValueError):
+                logger.warning(f"Could not convert feature to dict: {type(feature)}")
+                feature_dict = {"type": "unknown"}
+        
+        # Assign ID
         feature_id = self.state["next_id"]
-        feature["id"] = feature_id
-        self.state["features"].append(feature)
+        feature_dict["id"] = feature_id
+        self.state["features"].append(feature_dict)
         self.state["next_id"] += 1
         return feature_id
     
