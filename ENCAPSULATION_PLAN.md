@@ -274,3 +274,5 @@ def get_texture_features(texture_name: str) -> List[str]:
 2. Fallback to keywords only if LLM unavailable
 3. This leverages existing infrastructure and is much more robust
 
+
+

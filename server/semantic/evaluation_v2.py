@@ -25,10 +25,6 @@ spec.loader.exec_module(evaluation_module)
 compute_feature_metrics = evaluation_module.compute_feature_metrics
 compute_texture_metrics = evaluation_module.compute_texture_metrics
 features_to_dicts = evaluation_module.features_to_dicts
-    compute_feature_metrics,
-    compute_texture_metrics,
-    features_to_dicts,
-)
 
 
 def progressive_score(value: float, thresholds: Dict[str, float]) -> float:

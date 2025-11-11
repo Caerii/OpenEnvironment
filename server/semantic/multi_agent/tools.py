@@ -28,12 +28,6 @@ compute_texture_metrics = evaluation_module.compute_texture_metrics
 evaluate_aesthetic_quality = evaluation_module.evaluate_aesthetic_quality
 evaluate_quality_rubric = evaluation_module.evaluate_quality_rubric
 summarize_quality_rubric = evaluation_module.summarize_quality_rubric
-    compute_feature_metrics,
-    compute_texture_metrics,
-    evaluate_aesthetic_quality,
-    evaluate_quality_rubric,
-    summarize_quality_rubric,
-)
 from ...terrain import apply_actions
 
 try:

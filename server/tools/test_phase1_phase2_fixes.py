@@ -15,7 +15,8 @@ import os
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+import numpy as np
 
 # Setup paths
 server_dir = Path(__file__).parent.parent
@@ -24,6 +25,9 @@ if str(server_dir) not in sys.path:
     sys.path.insert(0, str(server_dir))
 if str(parent_dir) not in sys.path:
     sys.path.insert(0, str(parent_dir))
+
+# Import terrain export functions
+from server.terrain import to_png_8bit_gray, to_png_rgba
 
 # Load environment variables
 from dotenv import load_dotenv
@@ -45,6 +49,54 @@ test_results = {
     "integration": {},
     "summary": {}
 }
+
+# Setup sample_images directory
+sample_images_dir = parent_dir / "sample_images"
+sample_images_dir.mkdir(exist_ok=True)
+
+
+def save_terrain_textures(
+    heightmap: np.ndarray,
+    splatmap: np.ndarray,
+    test_name: str,
+    suffix: str = ""
+) -> Dict[str, str]:
+    """
+    Save heightmap and splatmap textures to sample_images folder.
+    
+    Args:
+        heightmap: Heightmap array (H x W)
+        splatmap: Splatmap array (H x W x 4)
+        test_name: Name of the test (used in filename)
+        suffix: Optional suffix for filename
+    
+    Returns:
+        Dictionary with paths to saved images
+    """
+    try:
+        # Normalize test name for filename
+        safe_name = test_name.lower().replace(" ", "_").replace(":", "")
+        if suffix:
+            safe_name = f"{safe_name}_{suffix}"
+        
+        height_path = sample_images_dir / f"{safe_name}_height.png"
+        splat_path = sample_images_dir / f"{safe_name}_splat.png"
+        
+        # Save heightmap (8-bit grayscale)
+        to_png_8bit_gray(heightmap, str(height_path))
+        
+        # Save splatmap (RGBA)
+        to_png_rgba(splatmap, str(splat_path))
+        
+        logger.info(f"Saved textures: {height_path.name}, {splat_path.name}")
+        
+        return {
+            "heightmap": str(height_path),
+            "splatmap": str(splat_path)
+        }
+    except Exception as e:
+        logger.error(f"Failed to save textures: {e}", exc_info=True)
+        return {}
 
 
 def test_archetype_matching():
@@ -266,7 +318,7 @@ def test_texture_feature_mapping():
     logger.info("TEST 4: Texture-to-Feature Mapping")
     logger.info("=" * 80)
     
-    from server.semantic.tools.quality_tools import analyze_texture_feature_relationship
+    from server.semantic.tools.quality_tools import analyze_texture_feature_relationship, _render_terrain_preview
     
     scene_state = {
         "seed": 42,
@@ -282,6 +334,16 @@ def test_texture_feature_mapping():
     logger.info(f"\nTesting with {len(actions)} actions")
     
     try:
+        # Render and save textures
+        saved_paths = {}
+        heightmap, splatmap = _render_terrain_preview(actions, scene_state)
+        if heightmap is not None and splatmap is not None:
+            saved_paths = save_terrain_textures(
+                heightmap, splatmap,
+                "test_4_texture_feature_mapping"
+            )
+            logger.info(f"✅ Saved textures to sample_images folder")
+        
         result = analyze_texture_feature_relationship(
             scene_state=scene_state,
             actions=actions,
@@ -308,7 +370,8 @@ def test_texture_feature_mapping():
             test_results["phase2"]["texture_mapping"] = {
                 "passed": True,
                 "contributions": len(contributions),
-                "gaps": len(gaps)
+                "gaps": len(gaps),
+                "saved_images": saved_paths
             }
             return True
         else:
@@ -402,7 +465,7 @@ def test_integration_refinement():
     logger.info("TEST 6: Integration - Refinement Uses New Tools")
     logger.info("=" * 80)
     
-    from server.semantic.tools.quality_tools import refine_composition, evaluate_terrain_quality
+    from server.semantic.tools.quality_tools import refine_composition, evaluate_terrain_quality, _render_terrain_preview
     
     scene_state = {
         "seed": 42,
@@ -421,6 +484,18 @@ def test_integration_refinement():
     logger.info(f"\nInitial actions: {len(actions)}")
     
     try:
+        # Save initial textures
+        saved_paths_initial = {}
+        saved_paths_refined = {}
+        heightmap_initial, splatmap_initial = _render_terrain_preview(actions, scene_state)
+        if heightmap_initial is not None and splatmap_initial is not None:
+            saved_paths_initial = save_terrain_textures(
+                heightmap_initial, splatmap_initial,
+                "test_6_integration_refinement",
+                "initial"
+            )
+            logger.info(f"✅ Saved initial textures to sample_images folder")
+        
         # Evaluate quality
         eval_result = evaluate_terrain_quality(
             scene_state=scene_state,
@@ -457,6 +532,16 @@ def test_integration_refinement():
             refined_actions = refine_data.get("refined_actions", [])
             changes = refine_data.get("changes_made", [])
             
+            # Save refined textures
+            heightmap_refined, splatmap_refined = _render_terrain_preview(refined_actions, scene_state)
+            if heightmap_refined is not None and splatmap_refined is not None:
+                saved_paths_refined = save_terrain_textures(
+                    heightmap_refined, splatmap_refined,
+                    "test_6_integration_refinement",
+                    "refined"
+                )
+                logger.info(f"✅ Saved refined textures to sample_images folder")
+            
             logger.info(f"✅ PASSED: Refinement completed")
             logger.info(f"   Original actions: {len(actions)}")
             logger.info(f"   Refined actions: {len(refined_actions)}")
@@ -477,7 +562,11 @@ def test_integration_refinement():
                 "passed": True,
                 "initial_score": initial_score,
                 "changes": len(changes),
-                "texture_analysis_used": texture_analysis_used
+                "texture_analysis_used": texture_analysis_used,
+                "saved_images": {
+                    "initial": saved_paths_initial,
+                    "refined": saved_paths_refined
+                }
             }
             return True
         else:
@@ -540,6 +629,7 @@ def run_all_tests():
         json.dump(test_results, f, indent=2)
     
     logger.info(f"\nResults saved to: {results_file}")
+    logger.info(f"Sample images saved to: {sample_images_dir}")
     
     return passed == total
 

@@ -7,14 +7,13 @@
       "success_rate": 1.0
     },
     "context_rubric": {
-      "passed": true,
-      "archetype_method": "dramatic_mountain",
-      "command_method": "dramatic_mountain"
+      "passed": false,
+      "error": "cannot import name 'DEFAULT_QUALITY_RUBRIC' from 'server.semantic.evaluation' (F:\\Github\\SemanticTerrain\\server\\semantic\\evaluation\\__init__.py)"
     },
     "refinement_priority": {
       "passed": true,
       "texture_changes": [
-        "Action 0 (mountain): radius 60 \u2192 85 - Increase mountain size to add rock coverage"
+        "Action 0 (mountain): radius 60 \u2192 75 - Increase mountain size to add rock coverage (adaptive: 15.0)"
       ]
     }
   },
@@ -22,7 +21,11 @@
     "texture_mapping": {
       "passed": true,
       "contributions": 2,
-      "gaps": 4
+      "gaps": 4,
+      "saved_images": {
+        "heightmap": "F:\\Github\\SemanticTerrain\\sample_images\\test_4_texture_feature_mapping_height.png",
+        "splatmap": "F:\\Github\\SemanticTerrain\\sample_images\\test_4_texture_feature_mapping_splat.png"
+      }
     },
     "parameter_modification": {
       "passed": true,
@@ -32,14 +35,24 @@
   "integration": {
     "refinement": {
       "passed": true,
-      "initial_score": 0.19,
-      "changes": 3,
-      "texture_analysis_used": true
+      "initial_score": 0.12,
+      "changes": 4,
+      "texture_analysis_used": true,
+      "saved_images": {
+        "initial": {
+          "heightmap": "F:\\Github\\SemanticTerrain\\sample_images\\test_6_integration_refinement_initial_height.png",
+          "splatmap": "F:\\Github\\SemanticTerrain\\sample_images\\test_6_integration_refinement_initial_splat.png"
+        },
+        "refined": {
+          "heightmap": "F:\\Github\\SemanticTerrain\\sample_images\\test_6_integration_refinement_refined_height.png",
+          "splatmap": "F:\\Github\\SemanticTerrain\\sample_images\\test_6_integration_refinement_refined_splat.png"
+        }
+      }
     }
   },
   "summary": {
-    "passed": 6,
+    "passed": 5,
     "total": 6,
-    "success_rate": 1.0
+    "success_rate": 0.8333333333333334
   }
 }
