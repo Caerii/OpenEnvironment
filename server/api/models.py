@@ -20,3 +20,19 @@ class Command(BaseModel):
         return str(v).strip()
 
 
+class MultiAgentRequest(BaseModel):
+    """Request payload for multi-agent terrain design."""
+
+    text: str = Field(..., description="User brief guiding the multi-agent terrain design")
+    profile: Optional[str] = Field(
+        default=None,
+        description="Prompt profile name for LLM configuration (e.g., compact, standard, omni)",
+    )
+    max_rounds: int = Field(
+        default=6,
+        ge=1,
+        le=12,
+        description="Maximum number of conversation rounds for the agent loop",
+    )
+
+

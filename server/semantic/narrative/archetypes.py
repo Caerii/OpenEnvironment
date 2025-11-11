@@ -284,64 +284,114 @@ def match_archetype_from_keywords(keywords: List[str]) -> TerrainArchetype:
     """
     Match archetype based on keywords in user command.
     
+    Improved matching that:
+    1. Checks for strong feature type combinations first
+    2. Weights keywords by importance
+    3. Considers archetype feature preferences
+    
     Args:
         keywords: List of keywords from user command
         
     Returns:
         Best matching TerrainArchetype
     """
+    keywords_lower = [k.lower() for k in keywords]
+    
+    # FIRST: Check for strong feature type combinations (override individual keywords)
+    # Check for valley + hills/river combination (very strong signal for Water's Legacy)
+    has_valley = "valley" in keywords_lower or "valleys" in keywords_lower
+    has_hills = "hill" in keywords_lower or "hills" in keywords_lower
+    has_river = "river" in keywords_lower or "rivers" in keywords_lower
+    
+    if has_valley and (has_hills or has_river):
+        return TERRAIN_ARCHETYPES["waters_legacy"]
+    
+    if "dune" in keywords_lower or "dunes" in keywords_lower:
+        if "desert" in keywords_lower or "sand" in keywords_lower:
+            return TERRAIN_ARCHETYPES["wind_architect"]
+    
+    if "mountain" in keywords_lower or "mountains" in keywords_lower:
+        if "peak" in keywords_lower or "peaks" in keywords_lower or "dramatic" in keywords_lower:
+            return TERRAIN_ARCHETYPES["ancient_uplift"]
+    
+    if "volcano" in keywords_lower or "volcanic" in keywords_lower:
+        return TERRAIN_ARCHETYPES["volcanic_birth"]
+    
+    if "glacier" in keywords_lower or "glacial" in keywords_lower:
+        return TERRAIN_ARCHETYPES["glacial_legacy"]
+    
+    # Keyword weights (importance for matching)
+    keyword_weights = {
+        # Very strong signals
+        "valley": 3.0,  # Very strong for Water's Legacy
+        "river": 2.5,
+        "dune": 3.0,   # Very strong for Wind Architect
+        "dunes": 3.0,
+        "desert": 2.5,
+        "mountain": 2.0,
+        "mountains": 2.0,
+        "volcano": 3.0,
+        "glacier": 3.0,
+        
+        # Moderate signals
+        "canyon": 2.0,
+        "sand": 2.0,
+        "peak": 1.5,
+        "peaks": 1.5,
+        
+        # Weak signals (could be multiple archetypes)
+        "hill": 1.0,
+        "hills": 1.0,
+        "gentle": 1.0,
+        "plain": 1.0,
+        "plains": 1.0,
+    }
+    
+    # Score each archetype based on keywords and feature preferences
+    scores = {name: 0.0 for name in TERRAIN_ARCHETYPES.keys()}
+    
+    for keyword in keywords_lower:
+        weight = keyword_weights.get(keyword, 1.0)
+        
+        # Check if keyword matches archetype's primary/secondary features
+        for archetype_name, archetype in TERRAIN_ARCHETYPES.items():
+            # Check primary features (higher weight)
+            primary_features_lower = [f.lower() for f in archetype.primary_features]
+            if keyword in primary_features_lower:
+                scores[archetype_name] += weight * 2.0
+            
+            # Check secondary features (medium weight)
+            secondary_features_lower = [f.lower() for f in archetype.secondary_features]
+            if keyword in secondary_features_lower:
+                scores[archetype_name] += weight * 1.0
+            
+            # Check accent features (lower weight)
+            accent_features_lower = [f.lower() for f in archetype.accent_features]
+            if keyword in accent_features_lower:
+                scores[archetype_name] += weight * 0.5
+    
+    # Also check keyword map for additional matches
     keyword_map = {
-        # Wind/Desert keywords
         "desert": "wind_architect",
-        "dune": "wind_architect",
-        "dunes": "wind_architect",
         "sand": "wind_architect",
         "sandy": "wind_architect",
         "wind": "wind_architect",
         "arid": "wind_architect",
-        
-        # Water keywords
-        "river": "waters_legacy",
-        "valley": "waters_legacy",
-        "canyon": "waters_legacy",
         "water": "waters_legacy",
         "stream": "waters_legacy",
-        
-        # Mountain keywords
-        "mountain": "ancient_uplift",
-        "mountains": "ancient_uplift",
-        "peak": "ancient_uplift",
-        "peaks": "ancient_uplift",
         "alpine": "ancient_uplift",
         "tectonic": "ancient_uplift",
-        
-        # Volcanic keywords
-        "volcano": "volcanic_birth",
-        "volcanic": "volcanic_birth",
         "lava": "volcanic_birth",
         "geothermal": "volcanic_birth",
-        
-        # Plains keywords
-        "plain": "depositional_plains",
-        "plains": "depositional_plains",
         "grassland": "depositional_plains",
         "meadow": "depositional_plains",
-        "gentle": "depositional_plains",
-        
-        # Glacial keywords
-        "glacier": "glacial_legacy",
-        "glacial": "glacial_legacy",
         "ice": "glacial_legacy",
-        "alpine": "glacial_legacy"
     }
     
-    # Score each archetype
-    scores = {name: 0 for name in TERRAIN_ARCHETYPES.keys()}
-    
-    for keyword in keywords:
-        keyword_lower = keyword.lower()
-        if keyword_lower in keyword_map:
-            scores[keyword_map[keyword_lower]] += 1
+    for keyword in keywords_lower:
+        if keyword in keyword_map:
+            weight = keyword_weights.get(keyword, 1.0)
+            scores[keyword_map[keyword]] += weight
     
     # Get archetype with highest score
     best_archetype = max(scores, key=scores.get)

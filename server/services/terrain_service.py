@@ -131,12 +131,12 @@ class TerrainService:
         
         # Feature types with varied parameters
         feature_types = [
-            ("mountain", {"count": 1, "height_range": (0.4, 0.7), "radius_range": (40, 80)}),
-            ("valley", {"count": 1, "depth_range": (0.2, 0.4), "radius_range": (50, 100)}),
-            ("hill", {"count": 1, "height_range": (0.2, 0.4), "radius_range": (30, 60)}),
-            ("mound", {"count": 1, "height_range": (0.15, 0.3), "radius_range": (20, 40)}),
-            ("basin", {"count": 1, "depth_range": (0.15, 0.3), "radius_range": (40, 70)}),
-            ("dunes", {"count": 1, "amp_range": (0.05, 0.12), "freq_range": (15.0, 25.0)}),
+            ("mountain", {"count": 1, "height_range": (0.45, 0.8), "radius_range": (48, 88)}),
+            ("valley", {"count": 1, "depth_range": (0.22, 0.45), "radius_range": (54, 96)}),
+            ("dunes", {"count": 1, "amp_range": (0.06, 0.14), "freq_range": (12.0, 24.0)}),
+            ("cliff", {"count": 1, "height_range": (0.35, 0.75), "length_range": (60, 120)}),
+            ("plateau", {"count": 1, "height_range": (0.32, 0.6), "width_range": (70, 120), "length_range": (90, 150)}),
+            ("canyon", {"count": 1, "depth_range": (0.35, 0.65), "width_range": (10, 18)}),
         ]
         
         # Select random features based on seed
@@ -176,45 +176,6 @@ class TerrainService:
                         "radius": radius
                     }
                 })
-            elif feature_type == "hill":
-                height = rng.uniform(*params["height_range"])
-                radius = rng.randint(*params["radius_range"])
-                default_actions.append({
-                    "kind": "add",
-                    "type": "hill",
-                    "count": params["count"],
-                    "position": {"region": region},
-                    "modifiers": {
-                        "height": height,
-                        "radius": radius
-                    }
-                })
-            elif feature_type == "mound":
-                height = rng.uniform(*params["height_range"])
-                radius = rng.randint(*params["radius_range"])
-                default_actions.append({
-                    "kind": "add",
-                    "type": "mound",
-                    "count": params["count"],
-                    "position": {"region": region},
-                    "modifiers": {
-                        "height": height,
-                        "radius": radius
-                    }
-                })
-            elif feature_type == "basin":
-                depth = rng.uniform(*params["depth_range"])
-                radius = rng.randint(*params["radius_range"])
-                default_actions.append({
-                    "kind": "add",
-                    "type": "basin",
-                    "count": params["count"],
-                    "position": {"region": region},
-                    "modifiers": {
-                        "depth": depth,
-                        "radius": radius
-                    }
-                })
             elif feature_type == "dunes":
                 amp = rng.uniform(*params["amp_range"])
                 freq = rng.uniform(*params["freq_range"])
@@ -227,6 +188,50 @@ class TerrainService:
                         "amplitude": amp,
                         "frequency": freq,
                         "angle": rng.uniform(0, 360)
+                    }
+                })
+            elif feature_type == "cliff":
+                height = rng.uniform(*params["height_range"])
+                length = rng.randint(*params["length_range"])
+                default_actions.append({
+                    "kind": "add",
+                    "type": "cliff",
+                    "count": params["count"],
+                    "position": {"region": region},
+                    "modifiers": {
+                        "height": height,
+                        "length": length,
+                        "orientation": rng.uniform(0, 360),
+                        "steepness": rng.uniform(0.8, 1.2),
+                    }
+                })
+            elif feature_type == "plateau":
+                height = rng.uniform(*params["height_range"])
+                width = rng.randint(*params["width_range"])
+                length = rng.randint(*params["length_range"])
+                default_actions.append({
+                    "kind": "add",
+                    "type": "plateau",
+                    "count": params["count"],
+                    "position": {"region": region},
+                    "modifiers": {
+                        "height": height,
+                        "width": width,
+                        "length": length,
+                        "orientation": rng.uniform(-25, 25),
+                    }
+                })
+            elif feature_type == "canyon":
+                depth = rng.uniform(*params["depth_range"])
+                width = rng.randint(*params["width_range"])
+                default_actions.append({
+                    "kind": "add",
+                    "type": "canyon",
+                    "count": params["count"],
+                    "position": {"region": region},
+                    "modifiers": {
+                        "depth": depth,
+                        "width": width,
                     }
                 })
         

@@ -9,13 +9,38 @@ import random
 from typing import List, Dict, Tuple, Optional, Any, Iterable
 import logging
 
-from ...bootstrap import ensure_bootstrapped
-
-ensure_bootstrapped()
+# Bootstrap import - handle both relative and absolute imports
+try:
+    from server.bootstrap import ensure_bootstrapped
+    ensure_bootstrapped()
+except ImportError:
+    # Fallback: ensure server is in path
+    import sys
+    from pathlib import Path
+    server_dir = Path(__file__).parent.parent.parent
+    if str(server_dir) not in sys.path:
+        sys.path.insert(0, str(server_dir))
+    try:
+        from server.bootstrap import ensure_bootstrapped
+        ensure_bootstrapped()
+    except ImportError:
+        # If bootstrap doesn't exist, just ensure paths are set
+        pass  # Continue without bootstrap
 
 from server.domain.models import Feature, Position, FeatureParameters
 from server.engine.feature_registry import FeatureRegistry
-from ..evaluation import compute_feature_metrics, evaluate_aesthetic_quality
+
+# Import from evaluation.py module (not package)
+import importlib.util
+import sys
+from pathlib import Path
+evaluation_module_path = Path(__file__).parent.parent / "evaluation.py"
+spec = importlib.util.spec_from_file_location("semantic.evaluation_module", evaluation_module_path)
+evaluation_module = importlib.util.module_from_spec(spec)
+sys.modules["semantic.evaluation_module"] = evaluation_module
+spec.loader.exec_module(evaluation_module)
+compute_feature_metrics = evaluation_module.compute_feature_metrics
+evaluate_aesthetic_quality = evaluation_module.evaluate_aesthetic_quality
 
 from .types import TerrainNarrative, FeatureComposition, GeologicalProcess
 
@@ -26,11 +51,59 @@ def _ensure_feature_instance(feat: Any) -> Optional[Feature]:
     if isinstance(feat, Feature):
         return feat
     if isinstance(feat, dict):
+        data = dict(feat)
+        data.setdefault("id", 0)
+        if data.get("x") is None or data.get("y") is None:
+            x0 = data.get("x0")
+            y0 = data.get("y0")
+            x1 = data.get("x1")
+            y1 = data.get("y1")
+            if x0 is not None and x1 is not None and y0 is not None and y1 is not None:
+                data["x"] = int((x0 + x1) / 2)
+                data["y"] = int((y0 + y1) / 2)
         try:
-            return Feature.from_dict(feat)
+            return Feature.from_dict(data)
         except Exception as exc:
             logger.warning(f"Failed to convert dict to Feature: {exc}")
     return None
+
+
+def _apply_micro_variation(
+    feature: Feature,
+    rng: random.Random,
+    intensity: float = 0.06,
+    jitter_position: bool = False,
+) -> None:
+    """Apply subtle seed-driven variation so repeated seeds diverge."""
+
+    params = feature.parameters
+
+    if params.height is not None:
+        multiplier = 1.0 + rng.uniform(-intensity, intensity)
+        params.height = max(0.05, min(1.6, params.height * multiplier))
+
+    if params.depth is not None:
+        multiplier = 1.0 + rng.uniform(-intensity, intensity)
+        params.depth = max(0.05, min(1.6, params.depth * multiplier))
+
+    if params.radius is not None:
+        multiplier = 1.0 + rng.uniform(-intensity, intensity)
+        params.radius = max(8, min(180, int(round(params.radius * multiplier))))
+
+    if params.width is not None:
+        multiplier = 1.0 + rng.uniform(-intensity, intensity)
+        params.width = max(8, min(220, int(round(params.width * multiplier))))
+
+    # Metadata assists downstream debugging.
+    feature.metadata.setdefault("micro_variation", True)
+
+    if jitter_position:
+        pos = feature.position
+        if pos and pos.x is not None and pos.y is not None:
+            delta = rng.randint(-6, 6)
+            pos.x = max(32, min(480, pos.x + delta))
+            delta_y = rng.randint(-5, 5)
+            pos.y = max(32, min(480, pos.y + delta_y))
 
 
 def generate_from_narrative(
@@ -205,8 +278,15 @@ def _generate_focal_feature(
     modifiers = _extract_modifiers_from_narrative(narrative, "focal")
     
     feature = generator.create_feature(focal_x, focal_y, modifiers, seed)
+    feature = _ensure_feature_instance(feature)
+    if feature is None:
+        raise ValueError("Failed to generate focal feature")
+
+    # Apply micro-variation so different seeds diverge subtly.
+    _apply_micro_variation(feature, rng)
+    feature.metadata.setdefault("seed", seed)
     
-    logger.debug(f"Created focal feature: {focal_type} at ({focal_x}, {focal_y})")
+    logger.debug(f"Created focal feature: {focal_type} at ({feature.position.x}, {feature.position.y})")
     
     return feature
 
@@ -261,6 +341,9 @@ def _generate_supporting_features(
         feature = _ensure_feature_instance(feature)
         if not feature:
             continue
+        
+        _apply_micro_variation(feature, rng, jitter_position=True)
+        feature.metadata.setdefault("seed", seed + i + 1)
         
         supporting_features.append(feature)
         logger.debug(f"Created supporting feature: {support_type} at ({x}, {y})")
@@ -330,6 +413,9 @@ def _generate_accent_features(
             feature = _ensure_feature_instance(feature)
             if feature is None:
                 continue
+
+            _apply_micro_variation(feature, rng, jitter_position=True)
+            feature.metadata.setdefault("seed", seed + n_accents + i + attempt + 1)
 
             accent_features.append(feature)
             logger.debug(f"Created accent feature: {accent_type} at ({x}, {y})")
@@ -471,7 +557,11 @@ def _spawn_feature_near(
 
     modifiers = _extract_modifiers_from_narrative(narrative, "accent")
     feature = generator.create_feature(x, y, modifiers, seed)
-    return _ensure_feature_instance(feature)
+    feature = _ensure_feature_instance(feature)
+    if feature:
+        _apply_micro_variation(feature, rng, jitter_position=True)
+        feature.metadata.setdefault("seed", seed)
+    return feature
 
 
 def _extract_modifiers_from_narrative(

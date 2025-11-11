@@ -4,7 +4,9 @@ from fastapi import HTTPException
 from typing import Dict
 from ...services.terrain_service import TerrainService
 from ...services.asset_service import AssetService
+from ...services.multi_agent_service import MultiAgentService
 from ..models import Command
+from ..models import MultiAgentRequest
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +14,12 @@ logger = logging.getLogger(__name__)
 class TerrainController:
     """Controller for terrain generation endpoints."""
     
-    def __init__(self, terrain_service: TerrainService, asset_service: AssetService):
+    def __init__(
+        self,
+        terrain_service: TerrainService,
+        asset_service: AssetService,
+        multi_agent_service: MultiAgentService,
+    ):
         """
         Initialize terrain controller.
         
@@ -22,6 +29,7 @@ class TerrainController:
         """
         self.terrain_service = terrain_service
         self.asset_service = asset_service
+        self.multi_agent_service = multi_agent_service
     
     def generate(self, cmd: Command) -> Dict:
         """
@@ -131,6 +139,44 @@ class TerrainController:
         except Exception as e:
             error_msg = f"Regeneration failed: {str(e)}"
             logger.error(f"ERROR in TerrainController.regenerate: {error_msg}", exc_info=True)
+            raise HTTPException(status_code=500, detail=error_msg)
+
+    def design_with_multi_agent(self, request: MultiAgentRequest) -> Dict:
+        """Run the multi-agent workflow and optionally apply the resulting actions."""
+
+        try:
+            result = self.multi_agent_service.run_design(
+                command_text=request.text,
+                profile=request.profile,
+                max_rounds=request.max_rounds,
+            )
+
+            heightmap = result.get("heightmap")
+            splatmap = result.get("splatmap")
+            state = result.get("state")
+            workflow = result.get("workflow", {})
+
+            assets = None
+            if heightmap is not None and splatmap is not None:
+                import time
+
+                tag = str(int(time.time()))
+                assets = self.asset_service.save_terrain_outputs(
+                    heightmap,
+                    splatmap,
+                    tag=tag,
+                )
+
+            return {
+                "ok": True,
+                "workflow": workflow,
+                "actions": result.get("actions", []),
+                "state": state,
+                "assets": assets,
+            }
+        except Exception as e:
+            error_msg = f"Multi-agent design failed: {str(e)}"
+            logger.error("ERROR in TerrainController.design_with_multi_agent: %s", error_msg, exc_info=True)
             raise HTTPException(status_code=500, detail=error_msg)
 
 

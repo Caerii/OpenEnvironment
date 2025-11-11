@@ -97,6 +97,7 @@ def main() -> None:
         features = state.get("features", [])
         metrics = compute_feature_metrics(features)
         quality = evaluate_aesthetic_quality(metrics)
+        quality_summary = quality.get("warnings", [])
 
         print(f"  ok: {payload.get('ok')}")
         print(f"  feature_count: {metrics['feature_count']}")
@@ -109,6 +110,8 @@ def main() -> None:
             print("  warnings:")
             for warning in quality["warnings"]:
                 print(f"    - {warning}")
+        if quality_summary:
+            print("  warning_summary:", "; ".join(quality_summary))
 
         if features:
             sample = features[0]

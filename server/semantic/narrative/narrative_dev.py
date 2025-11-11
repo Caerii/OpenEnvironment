@@ -15,6 +15,7 @@ from .types import (
     GeologicalProcess
 )
 from .archetypes import match_archetype_from_keywords, TERRAIN_ARCHETYPES
+from .archetype_matcher import match_archetype_semantic
 
 
 logger = logging.getLogger(__name__)
@@ -282,11 +283,11 @@ def develop_terrain_narrative(
     try:
         logger.info(f"Developing narrative for: {user_command[:100]}...")
         
-        # Step 1: Extract keywords
+        # Step 1: Extract keywords (for fallback)
         words = re.findall(r'\b\w+\b', user_command.lower())
         
-        # Step 2: Match archetype
-        archetype = match_archetype_from_keywords(words)
+        # Step 2: Match archetype using semantic matching (LLM preferred, keywords fallback)
+        archetype = match_archetype_semantic(user_command, keywords=words)
         logger.info(f"Selected archetype: {archetype.name}")
         
         # Step 3: Extract aesthetic goals

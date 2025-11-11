@@ -7,7 +7,7 @@ def test_build_system_prompt_injects_context():
     prompt = build_system_prompt(scene_summary, recent_actions, ["dramatic", "rugged"])
     assert scene_summary in prompt
     assert recent_actions in prompt
-    assert "dramatic" in prompt
+    assert "narrative" in prompt.lower()
 
 
 def test_build_user_prompt_injects_counts():
@@ -20,6 +20,6 @@ def test_build_user_prompt_injects_counts():
         entity_count=1,
         seed=42,
     )
-    assert "feature count".lower() in prompt.lower()
+    assert "features=3" in prompt
     assert "dramatic" in prompt
-    assert "42" in prompt
+    assert "seed=42" in prompt

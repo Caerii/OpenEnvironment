@@ -1,0 +1,16 @@
+{
+  "command": "carve_valley",
+  "critique": null,
+  "scene_state": {
+    "terrain_materials": {
+      "cliff": "rock",
+      "valley_floor": "soil"
+    },
+    "cliff_heights": {
+      "min": 100,
+      "max": 300
+    },
+    "valley_width": 500,
+    "valley_length": 1000
+  }
+}

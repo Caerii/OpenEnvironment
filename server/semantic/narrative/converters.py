@@ -106,13 +106,19 @@ def _feature_to_action(feat: 'Feature', label: str = "") -> Dict:
     """
     try:
         feat = _ensure_feature(feat)
+        position_dict = _position_to_dict(feat.position)
         action = {
             "kind": "add",
             "type": feat.type,
-            "position": _position_to_dict(feat.position),
+            "position": position_dict,
             "modifiers": _params_to_modifiers(feat.parameters),
             "count": 1
         }
+
+        # Backward compatibility: expose absolute position at top-level when available.
+        if "x" in position_dict and "y" in position_dict:
+            action["x"] = position_dict["x"]
+            action["y"] = position_dict["y"]
         
         # Add label if provided (for scene graph)
         if label:

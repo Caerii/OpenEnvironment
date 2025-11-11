@@ -7,7 +7,18 @@ from typing import Any, Dict, List, Tuple
 from .narrative_dev import develop_terrain_narrative
 from .generation import generate_from_narrative
 from .converters import composition_to_actions
-from ..evaluation import compute_feature_metrics, evaluate_aesthetic_quality, features_to_dicts
+# Import from evaluation.py module (not package)
+import importlib.util
+import sys
+from pathlib import Path
+evaluation_module_path = Path(__file__).parent.parent / "evaluation.py"
+spec = importlib.util.spec_from_file_location("semantic.evaluation_module", evaluation_module_path)
+evaluation_module = importlib.util.module_from_spec(spec)
+sys.modules["semantic.evaluation_module"] = evaluation_module
+spec.loader.exec_module(evaluation_module)
+compute_feature_metrics = evaluation_module.compute_feature_metrics
+evaluate_aesthetic_quality = evaluation_module.evaluate_aesthetic_quality
+features_to_dicts = evaluation_module.features_to_dicts
 
 
 def run_narrative_pipeline(

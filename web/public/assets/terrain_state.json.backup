@@ -2,28 +2,49 @@
   "features": [
     {
       "id": 1,
-      "type": "mountain",
-      "x": 246,
-      "y": 418,
-      "height": 0.7032121511243441,
-      "radius": 56,
-      "use_noise": true
+      "type": "plateau",
+      "x": 119,
+      "y": 263,
+      "height": 0.5079353094944681,
+      "width": 91,
+      "length": 122,
+      "orientation": 0.0
     },
     {
       "id": 2,
+      "type": "mountain",
+      "x": 15,
+      "y": 391,
+      "height": 0.7894006976639623,
+      "radius": 51,
+      "use_noise": true
+    },
+    {
+      "id": 3,
       "type": "dunes",
-      "x": 263,
-      "y": 173,
-      "x0": 177,
-      "y0": 87,
-      "x1": 349,
-      "y1": 259,
-      "amp": 0.07363098819582276,
-      "freq": 16.511781497285607,
-      "angle": 19.664625571482887
+      "x": 339,
+      "y": 464,
+      "x0": 240,
+      "y0": 365,
+      "x1": 438,
+      "y1": 512,
+      "amp": 0.0765792155709161,
+      "freq": 17.38074464680351,
+      "angle": 18.62436960311189
+    },
+    {
+      "type": "canyon",
+      "x0": 112,
+      "y0": 282,
+      "x1": 207,
+      "y1": 281,
+      "width": 12,
+      "depth": 0.6,
+      "falloff": 0.5,
+      "id": 4
     }
   ],
-  "seed": 647153238,
+  "seed": 1709658305,
   "semantic_scene": {
     "version": 1,
     "root": {
@@ -38,6 +59,43 @@
           "data": {},
           "feature_ids": [],
           "children": {
+            "Plateau_Group": {
+              "path": "/World/Features/Plateau_Group",
+              "name": "Plateau_Group",
+              "data": {
+                "semantic_label": "the plateaus"
+              },
+              "feature_ids": [],
+              "children": {
+                "feature_1": {
+                  "path": "/World/Features/Plateau_Group/feature_1",
+                  "name": "feature_1",
+                  "data": {
+                    "type": "plateau",
+                    "feature": {
+                      "id": 1,
+                      "type": "plateau",
+                      "x": 119,
+                      "y": 263,
+                      "height": 0.5079353094944681,
+                      "width": 91,
+                      "length": 122,
+                      "orientation": 0.0
+                    },
+                    "x": 119,
+                    "y": 263,
+                    "height": 0.5079353094944681,
+                    "width": 91,
+                    "length": 122,
+                    "orientation": 0.0
+                  },
+                  "feature_ids": [
+                    1
+                  ],
+                  "children": {}
+                }
+              }
+            },
             "Mountain_Group": {
               "path": "/World/Features/Mountain_Group",
               "name": "Mountain_Group",
@@ -46,27 +104,27 @@
               },
               "feature_ids": [],
               "children": {
-                "feature_1": {
-                  "path": "/World/Features/Mountain_Group/feature_1",
-                  "name": "feature_1",
+                "feature_2": {
+                  "path": "/World/Features/Mountain_Group/feature_2",
+                  "name": "feature_2",
                   "data": {
                     "type": "mountain",
                     "feature": {
-                      "id": 1,
+                      "id": 2,
                       "type": "mountain",
-                      "x": 246,
-                      "y": 418,
-                      "height": 0.7032121511243441,
-                      "radius": 56,
+                      "x": 15,
+                      "y": 391,
+                      "height": 0.7894006976639623,
+                      "radius": 51,
                       "use_noise": true
                     },
-                    "x": 246,
-                    "y": 418,
-                    "radius": 56,
-                    "height": 0.7032121511243441
+                    "x": 15,
+                    "y": 391,
+                    "radius": 51,
+                    "height": 0.7894006976639623
                   },
                   "feature_ids": [
-                    1
+                    2
                   ],
                   "children": {}
                 }
@@ -80,36 +138,75 @@
               },
               "feature_ids": [],
               "children": {
-                "feature_2": {
-                  "path": "/World/Features/Dunes_Group/feature_2",
-                  "name": "feature_2",
+                "feature_3": {
+                  "path": "/World/Features/Dunes_Group/feature_3",
+                  "name": "feature_3",
                   "data": {
                     "type": "dunes",
                     "feature": {
-                      "id": 2,
+                      "id": 3,
                       "type": "dunes",
-                      "x": 263,
-                      "y": 173,
-                      "x0": 177,
-                      "y0": 87,
-                      "x1": 349,
-                      "y1": 259,
-                      "amp": 0.07363098819582276,
-                      "freq": 16.511781497285607,
-                      "angle": 19.664625571482887
+                      "x": 339,
+                      "y": 464,
+                      "x0": 240,
+                      "y0": 365,
+                      "x1": 438,
+                      "y1": 512,
+                      "amp": 0.0765792155709161,
+                      "freq": 17.38074464680351,
+                      "angle": 18.62436960311189
                     },
-                    "x": 263,
-                    "y": 173,
-                    "x0": 177,
-                    "y0": 87,
-                    "x1": 349,
-                    "y1": 259,
-                    "amp": 0.07363098819582276,
-                    "freq": 16.511781497285607,
-                    "angle": 19.664625571482887
+                    "x": 339,
+                    "y": 464,
+                    "x0": 240,
+                    "y0": 365,
+                    "x1": 438,
+                    "y1": 512,
+                    "amp": 0.0765792155709161,
+                    "freq": 17.38074464680351,
+                    "angle": 18.62436960311189
                   },
                   "feature_ids": [
-                    2
+                    3
+                  ],
+                  "children": {}
+                }
+              }
+            },
+            "Canyon_Group": {
+              "path": "/World/Features/Canyon_Group",
+              "name": "Canyon_Group",
+              "data": {
+                "semantic_label": "the canyons"
+              },
+              "feature_ids": [],
+              "children": {
+                "feature_4": {
+                  "path": "/World/Features/Canyon_Group/feature_4",
+                  "name": "feature_4",
+                  "data": {
+                    "type": "canyon",
+                    "feature": {
+                      "type": "canyon",
+                      "x0": 112,
+                      "y0": 282,
+                      "x1": 207,
+                      "y1": 281,
+                      "width": 12,
+                      "depth": 0.6,
+                      "falloff": 0.5,
+                      "id": 4
+                    },
+                    "x0": 112,
+                    "y0": 282,
+                    "x1": 207,
+                    "y1": 281,
+                    "depth": 0.6,
+                    "width": 12,
+                    "falloff": 0.5
+                  },
+                  "feature_ids": [
+                    4
                   ],
                   "children": {}
                 }
@@ -123,6 +220,32 @@
           "data": {},
           "feature_ids": [],
           "children": {
+            "plateau_1": {
+              "path": "/World/Semantics/plateau_1",
+              "name": "plateau_1",
+              "data": {
+                "id": "plateau_1",
+                "type": "feature",
+                "label": "the plateaus",
+                "keywords": [
+                  "tableland",
+                  "plateaus",
+                  "plateau"
+                ],
+                "description": "1 plateau in the left",
+                "feature_refs": [
+                  1
+                ],
+                "metadata": {},
+                "created_at": 1762833725.8903008,
+                "user_intent": "",
+                "relationship_ids": []
+              },
+              "feature_ids": [
+                1
+              ],
+              "children": {}
+            },
             "mountain_1": {
               "path": "/World/Semantics/mountain_1",
               "name": "mountain_1",
@@ -131,23 +254,23 @@
                 "type": "feature",
                 "label": "the mountains",
                 "keywords": [
-                  "mountains",
-                  "peak",
-                  "summit",
                   "peaks",
-                  "mountain"
+                  "summit",
+                  "peak",
+                  "mountain",
+                  "mountains"
                 ],
-                "description": "1 mountain in the bottom",
+                "description": "1 mountain in the bottom-left",
                 "feature_refs": [
-                  1
+                  2
                 ],
                 "metadata": {},
-                "created_at": 1762811710.1673398,
+                "created_at": 1762833725.8912988,
                 "user_intent": "",
                 "relationship_ids": []
               },
               "feature_ids": [
-                1
+                2
               ],
               "children": {}
             },
@@ -160,23 +283,50 @@
                 "label": "the dunes",
                 "keywords": [
                   "dune",
-                  "sand",
-                  "arid",
                   "desert",
                   "dunes",
-                  "sandy"
+                  "sand",
+                  "sandy",
+                  "arid"
                 ],
-                "description": "1 dunes in the center",
+                "description": "1 dunes in the bottom",
                 "feature_refs": [
-                  2
+                  3
                 ],
                 "metadata": {},
-                "created_at": 1762811710.1683404,
+                "created_at": 1762833725.8912988,
                 "user_intent": "",
                 "relationship_ids": []
               },
               "feature_ids": [
-                2
+                3
+              ],
+              "children": {}
+            },
+            "canyon_1": {
+              "path": "/World/Semantics/canyon_1",
+              "name": "canyon_1",
+              "data": {
+                "id": "canyon_1",
+                "type": "feature",
+                "label": "the canyons",
+                "keywords": [
+                  "ravine",
+                  "canyon",
+                  "canyons",
+                  "gorge"
+                ],
+                "description": "1 canyon in the left",
+                "feature_refs": [
+                  4
+                ],
+                "metadata": {},
+                "created_at": 1762833725.8912988,
+                "user_intent": "",
+                "relationship_ids": []
+              },
+              "feature_ids": [
+                4
               ],
               "children": {}
             }
@@ -186,22 +336,40 @@
     },
     "entities": [
       {
-        "id": "mountain_1",
+        "id": "plateau_1",
         "type": "feature",
-        "label": "the mountains",
+        "label": "the plateaus",
         "keywords": [
-          "mountains",
-          "peak",
-          "summit",
-          "peaks",
-          "mountain"
+          "tableland",
+          "plateaus",
+          "plateau"
         ],
-        "description": "1 mountain in the bottom",
+        "description": "1 plateau in the left",
         "feature_refs": [
           1
         ],
         "metadata": {},
-        "created_at": 1762811710.1673398,
+        "created_at": 1762833725.8903008,
+        "user_intent": "",
+        "relationship_ids": []
+      },
+      {
+        "id": "mountain_1",
+        "type": "feature",
+        "label": "the mountains",
+        "keywords": [
+          "peaks",
+          "summit",
+          "peak",
+          "mountain",
+          "mountains"
+        ],
+        "description": "1 mountain in the bottom-left",
+        "feature_refs": [
+          2
+        ],
+        "metadata": {},
+        "created_at": 1762833725.8912988,
         "user_intent": "",
         "relationship_ids": []
       },
@@ -211,18 +379,37 @@
         "label": "the dunes",
         "keywords": [
           "dune",
-          "sand",
-          "arid",
           "desert",
           "dunes",
-          "sandy"
+          "sand",
+          "sandy",
+          "arid"
         ],
-        "description": "1 dunes in the center",
+        "description": "1 dunes in the bottom",
         "feature_refs": [
-          2
+          3
         ],
         "metadata": {},
-        "created_at": 1762811710.1683404,
+        "created_at": 1762833725.8912988,
+        "user_intent": "",
+        "relationship_ids": []
+      },
+      {
+        "id": "canyon_1",
+        "type": "feature",
+        "label": "the canyons",
+        "keywords": [
+          "ravine",
+          "canyon",
+          "canyons",
+          "gorge"
+        ],
+        "description": "1 canyon in the left",
+        "feature_refs": [
+          4
+        ],
+        "metadata": {},
+        "created_at": 1762833725.8912988,
         "user_intent": "",
         "relationship_ids": []
       }
@@ -238,14 +425,16 @@
       "actions": [
         {
           "kind": "add",
-          "type": "basin",
+          "type": "plateau",
           "count": 1,
           "position": {
             "region": "left"
           },
           "modifiers": {
-            "depth": 0.26414436673688635,
-            "radius": 55
+            "height": 0.5330694845755212,
+            "width": 100,
+            "length": 131,
+            "orientation": -6.01923883381361
           }
         },
         {
@@ -253,24 +442,12 @@
           "type": "mountain",
           "count": 1,
           "position": {
-            "region": "bottom"
+            "region": "bottom-left"
           },
           "modifiers": {
-            "height": 0.6366170053406539,
-            "radius": 46,
-            "steepness": 1.1414996595669034
-          }
-        },
-        {
-          "kind": "add",
-          "type": "hill",
-          "count": 1,
-          "position": {
-            "region": "bottom"
-          },
-          "modifiers": {
-            "height": 0.2865534135810107,
-            "radius": 54
+            "height": 0.4828508553709822,
+            "radius": 49,
+            "steepness": 1.4253219297903446
           }
         },
         {
@@ -278,56 +455,67 @@
           "type": "dunes",
           "count": 1,
           "position": {
-            "region": "center"
+            "region": "bottom"
           },
           "modifiers": {
-            "amplitude": 0.09870830067379105,
-            "frequency": 17.663305604572596,
-            "angle": 288.65749211873407
+            "amplitude": 0.09462136543240426,
+            "frequency": 21.147360989495304,
+            "angle": 0.7581792063998494
+          }
+        },
+        {
+          "kind": "add",
+          "type": "canyon",
+          "count": 1,
+          "position": {
+            "region": "left"
+          },
+          "modifiers": {
+            "depth": 0.4298991681371779,
+            "width": 13
           }
         }
       ],
       "parser": "unknown",
-      "timestamp": 1762811709.8835397,
-      "seed": 647153238
+      "timestamp": 1762833724.2396896,
+      "seed": 1709658305
     }
   ],
-  "next_id": 3,
+  "next_id": 5,
   "_last_narrative_meta": {
     "metrics": {
-      "feature_count": 2,
+      "feature_count": 4,
       "type_counts": {
+        "plateau": 1,
         "mountain": 1,
-        "dunes": 1
+        "dunes": 1,
+        "canyon": 1
       },
-      "type_diversity": 2,
+      "type_diversity": 4,
       "extent": {
-        "width": 17,
-        "height": 245
+        "width": 324,
+        "height": 201
       },
       "centroid": {
-        "x": 254.5,
-        "y": 295.5
+        "x": 157.66666666666666,
+        "y": 372.6666666666667
       },
       "height_stats": {
-        "min": 0.07363098819582276,
-        "max": 0.7032121511243441,
-        "mean": 0.38842156966008345,
-        "std": 0.31479058146426064
+        "min": 0.0765792155709161,
+        "max": 0.7894006976639623,
+        "mean": 0.4934788056823366,
+        "std": 0.2612138921125688
       },
       "radius_stats": {
-        "min": 56.0,
-        "max": 56.0,
-        "mean": 56.0,
-        "std": 0.0
+        "min": 12.0,
+        "max": 122.0,
+        "mean": 69.0,
+        "std": 41.430664971733194
       }
     },
     "quality": {
-      "score": 0.55,
-      "warnings": [
-        "Low feature count; scene may feel sparse",
-        "Spatial spread is limited; scene might feel cramped"
-      ]
+      "score": 1.0,
+      "warnings": []
     }
   }
 }

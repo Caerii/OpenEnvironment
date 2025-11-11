@@ -57,6 +57,13 @@ class ToolExecutor:
         from .narrative_tools import (
             generate_narrative_composition
         )
+        from .quality_tools import (
+            evaluate_terrain_quality,
+            refine_composition,
+            render_preview,
+            analyze_texture_feature_relationship,
+            modify_feature_parameters
+        )
         
         # Register tools
         self.tools = {
@@ -81,11 +88,18 @@ class ToolExecutor:
             "suggest_modification": suggest_modification,
             "validate_action": validate_action,
             
-            # Narrative tools (NEW!)
-            "generate_narrative_composition": generate_narrative_composition
+            # Narrative tools
+            "generate_narrative_composition": generate_narrative_composition,
+            
+            # Quality tools
+            "evaluate_terrain_quality": evaluate_terrain_quality,
+            "refine_composition": refine_composition,
+            "render_preview": render_preview,
+            "analyze_texture_feature_relationship": analyze_texture_feature_relationship,
+            "modify_feature_parameters": modify_feature_parameters
         }
         
-        logger.info(f"Registered {len(self.tools)} tools (including narrative generation)")
+        logger.info(f"Registered {len(self.tools)} tools (including narrative generation and quality evaluation)")
     
     def execute_tool(
         self,

@@ -76,14 +76,40 @@ def calculate_position(
                     "warning": "No valid reference positions found"
                 }
             
+            # Get narrative constraints for spatial patterns
+            narrative = scene_state.get("_narrative", {})
+            spatial_patterns = narrative.get("spatial_patterns", {}) if narrative else {}
+            clustering = spatial_patterns.get("clustering_tendency", 0.5)
+            alignment = spatial_patterns.get("directional_alignment")
+            
             # Calculate based on relationship
             if relationship == "near":
                 # Near = slight offset from centroid
                 avg_x = sum(p[0] for p in positions) // len(positions)
                 avg_y = sum(p[1] for p in positions) // len(positions)
-                # Add small random-ish offset
-                offset_x = (avg_x * 7) % 40 - 20  # Deterministic "random"
-                offset_y = (avg_y * 11) % 40 - 20
+                
+                # Apply clustering tendency: higher clustering = smaller offset
+                # Clustering 0.0 = spread out (full offset), 1.0 = clustered (minimal offset)
+                base_offset = offset_distance * (1.0 - clustering)
+                
+                # Ensure minimum offset for variation
+                base_offset = max(10, base_offset)
+                
+                # Apply directional alignment if present
+                if alignment is not None:
+                    import math
+                    angle_rad = math.radians(alignment)
+                    # Use smaller offset when aligned (more predictable placement)
+                    aligned_offset = base_offset * 0.7
+                    offset_x = int(aligned_offset * math.cos(angle_rad))
+                    offset_y = int(aligned_offset * math.sin(angle_rad))
+                else:
+                    # Add small random-ish offset within base_offset range
+                    # Use deterministic but varied offset based on position
+                    offset_magnitude = base_offset * 0.5  # Use half of base_offset for variation
+                    offset_x = int((avg_x * 7) % (offset_magnitude * 2) - offset_magnitude)
+                    offset_y = int((avg_y * 11) % (offset_magnitude * 2) - offset_magnitude)
+                
                 pos = [
                     max(0, min(511, avg_x + offset_x)),
                     max(0, min(511, avg_y + offset_y))

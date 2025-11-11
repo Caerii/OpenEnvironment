@@ -42,7 +42,8 @@ from .services import (
     AssetService,
     TerrainService,
     TemplateService,
-    MCPService
+    MCPService,
+    MultiAgentService,
 )
 
 state_service = StateService(STATE_PATH)
@@ -51,22 +52,23 @@ asset_service = AssetService(OUT_DIR)
 terrain_service = TerrainService(state_service, asset_service)
 template_service = TemplateService(terrain_service)
 mcp_service = MCPService(terrain_service, asset_service, state_service)
+multi_agent_service = MultiAgentService(terrain_service, state_service)
 
 # Initialize controllers
 from .api.controllers import (
     TerrainController,
     TemplateController,
     MCPController,
-    StatusController
+    StatusController,
 )
 
-terrain_controller = TerrainController(terrain_service, asset_service)
+terrain_controller = TerrainController(terrain_service, asset_service, multi_agent_service)
 template_controller = TemplateController(template_service, asset_service)
 mcp_controller = MCPController(mcp_service)
 status_controller = StatusController()
 
 # Import models
-from .api.models import Command
+from .api.models import Command, MultiAgentRequest
 from typing import Dict
 
 # ============================================================================
@@ -103,6 +105,12 @@ def reset(cmd: Command = Command()) -> Dict:
 def regenerate(cmd: Command = Command(text="", voxel=False, voxel_resolution=256)) -> Dict:
     """Regenerate terrain from current state."""
     return terrain_controller.regenerate(cmd)
+
+
+@app.post("/api/design/multi-agent")
+def design_multi_agent(request: MultiAgentRequest) -> Dict:
+    """Run the multi-agent terrain design workflow before applying actions."""
+    return terrain_controller.design_with_multi_agent(request)
 
 
 # ============================================================================

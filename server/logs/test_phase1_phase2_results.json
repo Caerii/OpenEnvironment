@@ -1,0 +1,45 @@
+{
+  "phase1": {
+    "archetype_matching": {
+      "passed": 4,
+      "failed": 0,
+      "total": 4,
+      "success_rate": 1.0
+    },
+    "context_rubric": {
+      "passed": true,
+      "archetype_method": "dramatic_mountain",
+      "command_method": "dramatic_mountain"
+    },
+    "refinement_priority": {
+      "passed": true,
+      "texture_changes": [
+        "Action 0 (mountain): radius 60 \u2192 85 - Increase mountain size to add rock coverage"
+      ]
+    }
+  },
+  "phase2": {
+    "texture_mapping": {
+      "passed": true,
+      "contributions": 2,
+      "gaps": 4
+    },
+    "parameter_modification": {
+      "passed": true,
+      "changes_applied": 2
+    }
+  },
+  "integration": {
+    "refinement": {
+      "passed": true,
+      "initial_score": 0.19,
+      "changes": 3,
+      "texture_analysis_used": true
+    }
+  },
+  "summary": {
+    "passed": 6,
+    "total": 6,
+    "success_rate": 1.0
+  }
+}

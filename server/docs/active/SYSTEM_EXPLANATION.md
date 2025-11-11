@@ -67,15 +67,17 @@
 
 ## Data Flow: Command to Output
 
-### Step 1: Command Parsing (`semantic/parser.py`)
+### Step 1: Command Parsing (`orchestration.py`)
 
 **Input:** Natural language string
 ```
 "create a desert with rolling dunes and two mountains on the left"
 ```
 
-**Process:**
-1. **LLM Parser** (Primary): Uses Cerebras Qwen model to parse command into structured JSON
+**Process (Three-Tier Parser System):**
+1. **Narrative Pipeline** (Primary): Handles aesthetic/narrative commands via `run_narrative_pipeline()`
+2. **SemanticParser** (Fallback): Uses LLM (Together/Cerebras) with ReAct agent for complex spatial reasoning
+3. **CommandParser** (Final Fallback): Regex-based parser for simple commands
    - System prompt includes:
      - Available tool registry (MCP-style)
      - Current scene graph state (for reference resolution)

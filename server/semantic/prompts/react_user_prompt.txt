@@ -1,13 +1,8 @@
-User command: "{command}"
+Command: "{command}"
 
-Scene summary: {scene_summary}
+Scene: {scene_summary}
+Recent: {recent_actions}
+Aesthetic intent: {aesthetic_goals}
+Stats: features={feature_count}, entities={entity_count}, seed={seed}
 
-Recent actions:
-{recent_actions}
-
-Aesthetic focus: {aesthetic_goals}
-
-Feature count: {feature_count} | Entity count: {entity_count} | Seed: {seed}
-
-Task: Use tool workflows to understand intent and generate the best terrain actions.
-Plan carefully, call the minimum tools needed, and prefer the narrative tool for aesthetic goals.
+Task: Decide on the minimal tool sequence and return the final terrain actions. Prefer the narrative composer for aesthetic briefs. Always output JSON only.

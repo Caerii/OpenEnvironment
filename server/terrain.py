@@ -29,7 +29,17 @@ from .semantic.spatial_resolver import resolve_position, resolve_multiple_positi
 
 # Import semantic
 from .semantic.state_manager import FeatureState
-from .semantic.evaluation import compute_feature_metrics, evaluate_aesthetic_quality
+# Import from evaluation.py module (not package)
+import importlib.util
+import sys
+from pathlib import Path
+evaluation_module_path = Path(__file__).parent / "semantic" / "evaluation.py"
+spec = importlib.util.spec_from_file_location("semantic.evaluation_module", evaluation_module_path)
+evaluation_module = importlib.util.module_from_spec(spec)
+sys.modules["semantic.evaluation_module"] = evaluation_module
+spec.loader.exec_module(evaluation_module)
+compute_feature_metrics = evaluation_module.compute_feature_metrics
+evaluate_aesthetic_quality = evaluation_module.evaluate_aesthetic_quality
 from .semantic.scene import TerrainSceneGraph, SceneGraphSerializer, SceneGraphIntegrator
 # DEAD IMPORT - SemanticParser is not used in this file (moved to orchestration.py)
 # from .semantic.parser import SemanticParser

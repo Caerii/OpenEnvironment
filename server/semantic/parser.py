@@ -4,10 +4,11 @@ import json
 import logging
 from typing import Dict, List, Optional
 from dotenv import load_dotenv
-from cerebras.cloud.sdk import Cerebras
+
 from .tool_registry import get_tool_registry, ToolCategory
 from .spatial_queries import handle_spatial_query
 from .narrative.utils import run_narrative_pipeline
+from .llm import create_llm_client, LLMClient
 
 # Load environment variables
 load_dotenv()
@@ -25,19 +26,8 @@ class SemanticParser:
     """
     
     def __init__(self):
-        api_key = os.environ.get("CEREBRAS_API_KEY")
-        
-        # FIX: Make graceful like CommandParser - don't crash if no API key
-        if not api_key:
-            logger.info("CEREBRAS_API_KEY not found - LLM features disabled, will use regex fallback")
-            self.client = None
-            self.llm_available = False
-            self.model = None
-        else:
-            self.client = Cerebras(api_key=api_key)
-            # self.model = "qwen-3-235b-a22b-instruct-2507"
-            self.model = "llama3.1-8b"
-            self.llm_available = True
+        self.llm_client: Optional[LLMClient] = create_llm_client()
+        self.llm_available = self.llm_client is not None
         
         # Load tool registry (always available, even without API key)
         try:
@@ -101,7 +91,7 @@ class SemanticParser:
 Output only valid JSON, no additional text."""
 
         # FIX: Check if LLM is available before trying to call it
-        if not self.llm_available or self.client is None:
+        if not self.llm_available or self.llm_client is None:
             logger.info("LLM not available, falling back to regex parser")
             return self._fallback_parse(command)
 
@@ -109,7 +99,8 @@ Output only valid JSON, no additional text."""
         if use_react and scene_state:
             try:
                 from .react_agent_v2 import ReActAgentV2
-                agent = ReActAgentV2(self.client, self.model)
+                prompt_profile = os.environ.get("LLM_PROMPT_PROFILE", "compact")
+                agent = ReActAgentV2(self.llm_client, prompt_profile=prompt_profile)
                 logger.info(f"Using ReAct agent V2 for command: {command[:50]}...")
                 result = agent.solve(command, scene_state)
                 
@@ -126,17 +117,15 @@ Output only valid JSON, no additional text."""
 
         # Fallback to single-turn parsing
         try:
-            response = self.client.chat.completions.create(
+            response = self.llm_client.chat(
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_message}
+                    {"role": "user", "content": user_message},
                 ],
-                model=self.model,
-                stream=False,
-                max_completion_tokens=4000,
-                temperature=0.3,  # Lower temperature for more consistent parsing
+                temperature=0.3,
                 top_p=0.8,
-                response_format={"type": "json_object"}
+                max_completion_tokens=2000,
+                response_format={"type": "json_object"},
             )
             
             # Extract JSON from response

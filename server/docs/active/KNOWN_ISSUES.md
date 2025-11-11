@@ -1,8 +1,10 @@
 # Known Issues & Missing Features
 
-**Last Updated:** November 3, 2025
+**Last Updated:** November 11, 2025
 
 This document tracks critical bugs, missing features, and production issues that need attention.
+
+**Note:** Some issues listed below have been partially resolved. See `CURRENT_STATE_ANALYSIS_2025.md` in archive for detailed status.
 
 ---
 
@@ -18,23 +20,25 @@ This document tracks critical bugs, missing features, and production issues that
 
 ---
 
-### 2. Scene Graph Cleanup on Feature Removal
+### 2. Scene Graph Cleanup on Feature Removal ⚠️ PARTIALLY RESOLVED
 **Problem:** When features are removed, scene graph isn't cleaned up:
 - Entities still reference deleted features
 - Feature nodes remain in scene graph  
 - Orphaned relationships
 
-**Fix:** Call `scene_graph.remove_feature()` and cleanup entities after removal
+**Status:** Scene graph cleanup exists in `orchestration.py:cleanup_scene_graph()` but may not be called in all removal paths. Need to verify integration.
 
-**Files:** `server/terrain.py`, `server/semantic/scene/integration.py`
+**Files:** `server/orchestration.py`, `server/semantic/scene/integration.py`
 
 ---
 
-### 3. Non-Deterministic Randomness
+### 3. Non-Deterministic Randomness ⚠️ NEEDS VERIFICATION
 **Problem:** `engine/spatial.py` uses Python's `random` module (not seeded)
 - Same seed ≠ same result
 - Breaks determinism guarantee
 - Testing impossible
+
+**Status:** Need to verify if this has been fixed. Check `server/engine/spatial.py` for use of `np.random.RandomState`.
 
 **Fix:** Use `np.random.RandomState(seed)` everywhere
 

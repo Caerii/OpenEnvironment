@@ -6,6 +6,7 @@ from .mcp_service import MCPService
 from .state_service import StateService
 from .asset_service import AssetService
 from .texture_service import TextureService
+from .multi_agent_service import MultiAgentService
 
 __all__ = [
     "TerrainService",
@@ -13,7 +14,8 @@ __all__ = [
     "MCPService",
     "StateService",
     "AssetService",
-    "TextureService"
+    "TextureService",
+    "MultiAgentService",
 ]
 
 

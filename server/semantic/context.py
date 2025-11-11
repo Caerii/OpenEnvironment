@@ -6,7 +6,11 @@ from collections import Counter
 from typing import Any, Dict, Iterable, List, Sequence
 
 
-def summarize_scene(scene_state: Dict[str, Any], max_types: int = 4) -> str:
+def summarize_scene(
+    scene_state: Dict[str, Any],
+    max_types: int = 4,
+    max_chars: int | None = None,
+) -> str:
     """Return a concise natural-language summary of the scene."""
 
     if not scene_state:
@@ -30,10 +34,15 @@ def summarize_scene(scene_state: Dict[str, Any], max_types: int = 4) -> str:
     )
 
     tail = f" | seed={seed}" if seed is not None else ""
-    return f"Features: {top_types} | {extent_str}{tail}"
+    summary = f"Features: {top_types} | {extent_str}{tail}"
+    return _clip_text(summary, max_chars)
 
 
-def summarize_recent_actions(action_history: Iterable[Dict[str, Any]], limit: int = 3) -> str:
+def summarize_recent_actions(
+    action_history: Iterable[Dict[str, Any]],
+    limit: int = 3,
+    max_chars: int | None = None,
+) -> str:
     """Summarise recent actions for prompt inclusion."""
 
     history = list(action_history or [])
@@ -51,7 +60,8 @@ def summarize_recent_actions(action_history: Iterable[Dict[str, Any]], limit: in
         ) or "no actions"
         lines.append(f"• {command} → {type_summary} (via {parser})")
 
-    return "\n".join(lines)
+    summary = "\n".join(lines)
+    return _clip_text(summary, max_chars)
 
 
 def infer_active_aesthetic_goals(command: str, scene_state: Dict[str, Any], limit: int = 6) -> List[str]:
@@ -64,7 +74,8 @@ def infer_active_aesthetic_goals(command: str, scene_state: Dict[str, Any], limi
         goals.extend(meta.get("aesthetic_goals", []) or [])
 
     if goals:
-        return _unique_preserve_order(goals)[:limit]
+        inferred = _unique_preserve_order(goals)[:limit]
+        return inferred or ["balanced"]
 
     command_lower = (command or "").lower()
     keyword_map = {
@@ -109,3 +120,12 @@ def _unique_preserve_order(values: Iterable[str]) -> List[str]:
             ordered.append(value)
             seen.add(value)
     return ordered
+
+
+def _clip_text(text: str, max_chars: int | None) -> str:
+    if not text:
+        return text
+    if max_chars is None or len(text) <= max_chars:
+        return text
+    clipped = text[: max(0, max_chars - 3)].rstrip()
+    return f"{clipped}..."
