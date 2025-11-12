@@ -20,10 +20,10 @@
 - 🧊 **Voxel Generation** - Generate 3D voxel meshes (128³ to 2048³ resolution) for block-based games
 
 ### Quality & Refinement
-- 📈 **Quality Evaluation** - Feature metrics, texture metrics, and aesthetic quality rubrics
-- 🔄 **Iterative Refinement** - Automatic parameter adjustments based on quality feedback
-- 🤝 **Multi-Agent Workflow** - Artist/Critic/Integrator/Judge collaboration for high-quality terrain
-- 🎭 **Narrative-Driven** - Story-based terrain generation with archetypes and aesthetic goals
+- 📈 **Quality Evaluation** - Feature metrics, texture metrics, and aesthetic quality rubrics ✅ **Production**
+- 🔄 **Iterative Refinement** - Automatic parameter adjustments based on quality feedback ✅ **Production**
+- 🤝 **Multi-Agent Workflow** - Artist/Critic/Integrator/Judge collaboration for high-quality terrain ⚠️ **Experimental** (edge cases prevent full integration)
+- 🎭 **Narrative-Driven** - Story-based terrain generation with archetypes and aesthetic goals ✅ **Production**
 
 ### Advanced Features
 - 🗺️ **Template System** - 16+ curated terrain templates with natural language or JSON actions
@@ -230,11 +230,13 @@ Output Layer (Heightmaps, Splatmaps, Voxels)
 
 The system automatically selects the best parsing strategy based on command complexity:
 
-1. **Narrative Pipeline** (Default) - Story-driven generation with aesthetic goals
-2. **SemanticParser** - LLM-powered parsing with scene graph context
-3. **ReAct Agent** - Tool-calling reasoning agent for complex commands
-4. **Multi-Agent Workflow** - Artist/Critic/Integrator/Judge collaboration
-5. **Regex Fallback** - Basic parsing without LLM (no API key required)
+1. **Narrative Pipeline** (Default) - Story-driven generation with aesthetic goals ✅ **Production**
+2. **SemanticParser** - LLM-powered parsing with scene graph context ✅ **Production**
+3. **ReAct Agent** - Tool-calling reasoning agent for complex commands ⚠️ **Experimental** (used in multi-agent workflow)
+4. **Multi-Agent Workflow** - Artist/Critic/Integrator/Judge collaboration ⚠️ **Experimental** (separate endpoint, has edge cases)
+5. **Regex Fallback** - Basic parsing without LLM (no API key required) ✅ **Production**
+
+**Note:** Some parsing strategies (ReAct Agent, Multi-Agent Workflow) are experimental and have edge cases preventing full integration into the main pipeline. They are available via separate endpoints but may have limitations.
 
 **For detailed information on each strategy, when to use them, and how they work, see [docs/PARSING_STRATEGIES.md](docs/PARSING_STRATEGIES.md).**
 
@@ -255,7 +257,7 @@ The system automatically selects the best parsing strategy based on command comp
 - `POST /api/templates/{id}/apply` - Apply template
 
 ### Multi-Agent Endpoints
-- `POST /api/design/multi-agent` - Run multi-agent terrain design workflow
+- `POST /api/design/multi-agent` - Run multi-agent terrain design workflow ⚠️ **Experimental** (has edge cases, not fully integrated)
 
 ### MCP Endpoints
 - `GET /api/mcp` - MCP server information
@@ -332,6 +334,29 @@ DEFAULT_SEED=42                # Random seed
 
 ---
 
+## ⚠️ Known Issues & Experimental Features
+
+**Important:** This codebase contains experimental features and broken parts of the pipeline that have edge cases preventing full integration into the production system.
+
+### Experimental Features
+Several features exist but are **not fully integrated** into the main production pipeline:
+- **Feature Renderer System** (`RendererRegistry`) - Orphaned code, production uses `FeatureRegistry` instead
+- **Domain Models** - Partial migration, production still uses dict-based features
+- **Configuration System** - Exists but production uses hardcoded defaults
+- **Slope Erosion** - Function exists but never called
+- **Rubric Evolution** - Only used in experimental multi-agent workflow
+
+### Broken/Incomplete Integration
+Some features have edge cases or integration issues:
+- **Multi-Agent Workflow** - Separate experimental endpoint (`/api/design/multi-agent`)
+- **ReAct Agent** - Used in experimental workflows, not main pipeline
+- **Domain Model Migration** - Incomplete transition from dicts to typed models
+- **Configuration System** - Not utilized, defaults hardcoded in `feature_registry.py`
+
+**For complete details on experimental features, broken integrations, and what's actually used in production, see [docs/UNDOCUMENTED_FEATURES.md](docs/UNDOCUMENTED_FEATURES.md).**
+
+---
+
 ## 🤝 Contributing
 
 Contributions welcome! Areas for improvement:
@@ -340,6 +365,7 @@ Contributions welcome! Areas for improvement:
 - More template environments
 - Performance optimizations
 - Documentation improvements
+- **Fixing experimental feature integration** - See [docs/UNDOCUMENTED_FEATURES.md](docs/UNDOCUMENTED_FEATURES.md) for details
 
 **For development guidelines, project structure, and contribution process, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).**
 
