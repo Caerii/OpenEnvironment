@@ -1,0 +1,4 @@
+{
+  "command": "design a lush plateau surrounded by canyons and layered terraces",
+  "summary": " {\n  \"strengths\": [\"The plan effectively raises a central area for the lush plateau and carves canyons with steep walls.\"],\n  \"issues\": [\"The layered terraces could be more evenly spaced and connected to the canyons for a smoother transition.\"],\n  \"priority_recommendations\": [\n    \"Add more terraces around the plateau and canyons to create a more gradual transition between levels.\",\n    \"Ensure that the terraces are evenly spaced and have consistent heights for a more cohesive look.\"\n  ],\n  \"blocking\": false,\n  \"required_focus\": [\"Evenly spaced layered terraces\", \"Smooth transitions between terrain features\"]\n}"
+}

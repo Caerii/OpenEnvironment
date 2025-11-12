@@ -1,0 +1,13 @@
+{
+  "command": "design a terrain scene",
+  "critique": null,
+  "scene_state": {
+    "terrain_features": [
+      {
+        "type": "plateau",
+        "size": "large",
+        "vegetation": "lush"
+      }
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "actions": [],
+  "iterations": 5,
+  "total_tool_calls": 4,
+  "reasoning_trace": [
+    "USER: Command: \"create a dramatic mountain landscape with valleys and cliffs\"\n\nScene: Empty terrain (seed=...",
+    "ASSISTANT: Calling tools: generate_narrative_composition",
+    "TOOL [generate_narrative_composition]: \u2717",
+    "ASSISTANT: Calling tools: resolve_reference",
+    "TOOL [resolve_reference]: \u2713",
+    "ASSISTANT: Calling tools: calculate_position",
+    "TOOL [calculate_position]: \u2713",
+    "USER: Reminder: 2 iteration(s) left. Call the narrative tool or return actions now....",
+    "ASSISTANT: Calling tools: generate_narrative_composition",
+    "TOOL [generate_narrative_composition]: \u2717",
+    "USER: Reminder: 1 iteration(s) left. Call the narrative tool or return actions now....",
+    "ASSISTANT: Since the narrative tool failed, we will attempt to generate actions manually.\n\nBased on the command \"create a dramatic mountain landscape with valley...",
+    "USER: Please provide the final terrain actions in JSON format...."
+  ],
+  "quality_info": null,
+  "success": false
+}

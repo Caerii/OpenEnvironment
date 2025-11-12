@@ -1,0 +1,11 @@
+{
+  "command": "update_terrain",
+  "critique": {
+    "increase_icy_accents_coverage": true
+  },
+  "scene_state": {
+    "terrain_type": "valley",
+    "climate": "alpine",
+    "features": []
+  }
+}
