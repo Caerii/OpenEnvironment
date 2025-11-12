@@ -1,0 +1,7 @@
+node_modules
+*.png
+
+# Environment variables
+.env
+.env.local
+.env.*.local
