@@ -1,3 +1,20 @@
+<!--
+METADATA:
+  File: ARCHITECTURE_CONNECTION_MAP.md
+  Created: November 2025
+  Last Modified: 2025-11-11
+  Status: See README.md for current status
+  Purpose: AI-generated planning/analysis document
+  Archive Date: 2025-11-11
+-->
+
+
+## 📋 Document Purpose
+
+This document was created during active development to map connections between system components and layers.
+
+## ⚠️ Status: See README.md for current status
+
 # Architecture Connection Map: What Exists vs What's Connected
 
 ## Current State (BROKEN CONNECTIONS)
@@ -272,4 +289,5 @@ Final Quality Score
 - [ ] Generate pathway matches multi-agent pathway quality evaluation
 - [ ] Quality scores are actionable (used for refinement)
 - [ ] System is more robust and produces better terrain
+
 

@@ -1,3 +1,20 @@
+<!--
+METADATA:
+  File: WHAT_NEEDS_TESTING.md
+  Created: November 2025
+  Last Modified: 2025-11-11
+  Status: See README.md for current status
+  Purpose: AI-generated planning/analysis document
+  Archive Date: 2025-11-11
+-->
+
+
+## 📋 Document Purpose
+
+This document was created during active development to list areas that need testing.
+
+## ⚠️ Status: See README.md for current status
+
 # What Needs to be Tested - Complete Checklist
 
 ## ✅ **Fixed Issues**
@@ -277,6 +294,7 @@ uv run python -m pytest tests/ -v
 5. **Document test results** (10 min)
 
 **Total:** ~80 minutes to complete all critical testing
+
 
 
 

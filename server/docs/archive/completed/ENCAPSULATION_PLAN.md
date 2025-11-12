@@ -1,3 +1,20 @@
+<!--
+METADATA:
+  File: ENCAPSULATION_PLAN.md
+  Created: November 2025
+  Last Modified: 2025-11-11
+  Status: See README.md for current status
+  Purpose: AI-generated planning/analysis document
+  Archive Date: 2025-11-11
+-->
+
+
+## 📋 Document Purpose
+
+This document was created during active development to plan encapsulation of brittle patterns.
+
+## ⚠️ Status: See README.md for current status
+
 # Encapsulation Plan: Fixing Brittle Patterns
 
 ## 🎯 Priority Order
@@ -273,6 +290,7 @@ def get_texture_features(texture_name: str) -> List[str]:
 1. Use the narrative pipeline's LLM to match archetypes
 2. Fallback to keywords only if LLM unavailable
 3. This leverages existing infrastructure and is much more robust
+
 
 
 

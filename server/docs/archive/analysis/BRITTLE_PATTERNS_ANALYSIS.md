@@ -1,4 +1,32 @@
+<!--
+METADATA:
+  File: BRITTLE_PATTERNS_ANALYSIS.md
+  Created: November 2025
+  Last Modified: 2025-11-11
+  Status: PARTIALLY OUTDATED - Many patterns refactored, but analysis still relevant
+  Purpose: Analysis of brittle code patterns and architectural issues
+  Archive Date: 2025-11-11
+-->
+
 # Brittle Patterns & Encapsulation Needs
+
+## 📋 Document Purpose
+
+This document was created to **identify brittle code patterns** that needed refactoring. It analyzed hard-coded values, keyword matching, and other architectural issues.
+
+## ✅ Current Status
+
+**Many patterns have been refactored**, but the analysis remains useful for understanding design decisions:
+
+- ✅ **Keyword-Based Archetype Matching** - IMPROVED (semantic matching added)
+- ✅ **Magic Numbers** - FIXED (centralized in `server/semantic/config.py`)
+- ✅ **Brittle String Matching** - FIXED (structured warnings implemented)
+- ✅ **Inconsistent State** - FIXED (`StateInitializer` created)
+- ⚠️ **Some patterns may still exist** - Check current codebase
+
+## 📝 Historical Analysis
+
+The patterns identified below have been addressed through the encapsulation work documented in `ENCAPSULATION_COMPLETE.md`.
 
 ## 🔴 Critical Brittle Patterns
 
@@ -457,6 +485,7 @@ quality_threshold=0.8  # Hard-coded
 - Use the narrative pipeline's LLM to match archetypes semantically
 - Fallback to keyword matching only if LLM unavailable
 - This leverages existing infrastructure!
+
 
 
 

@@ -1,3 +1,20 @@
+<!--
+METADATA:
+  File: BRITTLE_PATTERNS_AND_FIXES.md
+  Created: November 2025
+  Last Modified: 2025-11-11
+  Status: See README.md for current status
+  Purpose: AI-generated planning/analysis document
+  Archive Date: 2025-11-11
+-->
+
+
+## 📋 Document Purpose
+
+This document was created during active development to analyze brittle patterns and propose fixes.
+
+## ⚠️ Status: See README.md for current status
+
 # Brittle Patterns & Encapsulation Needs - Complete Analysis
 
 ## 🔴 Critical Brittle Patterns (User Identified)
@@ -490,6 +507,7 @@ except Exception as e:
 3. This is much more robust and leverages existing infrastructure
 
 **The narrative pipeline already uses LLM for story generation - we can use it for archetype matching too!**
+
 
 
 

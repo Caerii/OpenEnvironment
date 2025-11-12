@@ -84,7 +84,13 @@ Deep-dive analyses from earlier development phases:
 - Technical feasibility and vision documents
 - Status reports and honest assessments
 
-**Recent additions:** 30+ analysis documents moved from root directory (Nov 2025)
+**Recent additions:** 
+- 30+ analysis documents moved from root directory (Nov 2025)
+- Planning documents from `old_ai_generated_docs/` (Nov 2025):
+  - `ARCHITECTURE_CONNECTION_MAP.md` - Component connection mapping
+  - `BRITTLE_PATTERNS_ANALYSIS.md` - Brittle pattern identification
+  - `DEEP_GENERATE_PATHWAY_ANALYSIS.md` - Generation pathway analysis
+  - `ROOT_CAUSE_ANALYSIS.md` - Root cause analysis of architectural issues
 
 ### **Completed Work** (`archive/completed/`)
 Completion reports for major milestones:
@@ -93,8 +99,16 @@ Completion reports for major milestones:
 - **Phase completion** (MCP integration, scene graph, etc.)
 - **Implementation reports** (narrative tools, ReAct agent, quality improvements)
 - **Fix summaries** (context length, auto-refresh, semantic fixes)
+- **Implementation plans** (critical action plans, prioritized fixes, encapsulation)
 
-**Recent additions:** 24+ completion reports moved from root directory (Nov 2025)
+**Recent additions:** 
+- 24+ completion reports moved from root directory (Nov 2025)
+- Planning documents from `old_ai_generated_docs/` (Nov 2025):
+  - `CRITICAL_ACTION_PLAN.md` - Prioritized critical fixes (mostly implemented)
+  - `ENCAPSULATION_COMPLETE.md` - Encapsulation refactoring summary
+  - `PRIORITIZED_FIX_PLAN.md` - Prioritized fix plan
+  - `QUICK_FIX_REFERENCE.md` - Quick reference for code changes (outdated)
+  - `TESTING_SUMMARY.md`, `TESTING_CHECKLIST.md` - Testing documentation
 
 ---
 
