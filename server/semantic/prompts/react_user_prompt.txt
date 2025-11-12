@@ -1,0 +1,8 @@
+Command: "{command}"
+
+Scene: {scene_summary}
+Recent: {recent_actions}
+Aesthetic intent: {aesthetic_goals}
+Stats: features={feature_count}, entities={entity_count}, seed={seed}
+
+Task: Decide on the minimal tool sequence and return the final terrain actions. Prefer the narrative composer for aesthetic briefs. Always output JSON only.
