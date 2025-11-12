@@ -4,6 +4,19 @@
 
 ---
 
+## ⚠️ Documentation Notice
+
+**Important:** Some parts of the documentation may be outdated. The codebase is the **source of truth** - always reference the actual code for ground truth implementation details. Documentation is maintained as best effort but may lag behind code changes, especially for experimental features and edge cases.
+
+**When in doubt, check the code:**
+- Production pipeline: `server/terrain.py` → `server/orchestration.py` → `server/engine/builder.py`
+- API endpoints: `server/main.py` and `server/api/controllers/`
+- Feature implementations: `server/engine/feature_registry.py` and `server/primitives/`
+
+For details on experimental features and broken integrations, see the [Known Issues & Experimental Features](#known-issues-experimental-features) section below.
+
+---
+
 ## 🎯 Key Features
 
 ### Natural Language Processing
@@ -180,6 +193,13 @@ Complete documentation is available in the **[docs/](docs/)** directory. Start w
   - Code style and best practices
   - Contributing guidelines
 
+- **[docs/TESTING.md](docs/TESTING.md)** - Complete testing guide
+  - Test organization (unit, integration, manual scripts)
+  - What each test covers
+  - How to run tests
+  - Test coverage and known issues
+  - Writing new tests
+
 ### Setup & Configuration
 
 - **[SETUP.md](SETUP.md)** - Detailed setup and installation guide
@@ -334,6 +354,7 @@ DEFAULT_SEED=42                # Random seed
 
 ---
 
+<a id="known-issues-experimental-features"></a>
 ## ⚠️ Known Issues & Experimental Features
 
 **Important:** This codebase contains experimental features and broken parts of the pipeline that have edge cases preventing full integration into the production system.
@@ -395,3 +416,4 @@ MIT - Use this as a foundation for your projects!
 - **[API Reference](docs/API_REFERENCE.md)** - Complete API documentation
 - **[Examples](docs/EXAMPLES.md)** - Usage examples and patterns
 - **[Development Guide](docs/DEVELOPMENT.md)** - Contributing and development
+- **[Testing Guide](docs/TESTING.md)** - Test suite documentation and how to run tests

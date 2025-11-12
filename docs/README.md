@@ -63,6 +63,13 @@ Welcome to the Semantic Terrain documentation. This directory contains comprehen
   - Testing
   - Contributing
 
+- **[TESTING.md](TESTING.md)** - Complete testing guide
+  - Test organization and structure
+  - What each test covers
+  - How to run tests
+  - Test coverage and known issues
+  - Writing new tests
+
 ---
 
 ## Gap Analysis
@@ -107,6 +114,7 @@ docs/
 ├── API_REFERENCE.md       # API documentation
 ├── EXAMPLES.md            # Usage examples
 ├── DEVELOPMENT.md         # Development guide
+├── TESTING.md             # Testing guide
 └── UNDOCUMENTED_FEATURES.md  # Gap analysis - features not yet documented
 ```
 
