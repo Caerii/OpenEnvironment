@@ -1,61 +1,84 @@
 # Semantic Terrain
 
-A real-time web-based terrain generation system with natural language input. Generate Unity-ready heightmaps, splatmaps, and voxel meshes using semantic commands like "add a mountain on the left" or "create rolling dunes."
+**A real-time, AI-powered terrain generation system** that converts natural language commands into procedural 3D terrain with heightmaps, splatmaps, and voxel meshes. Features multiple parsing strategies (narrative-driven, LLM-powered, multi-agent), quality evaluation, and a USD-inspired scene graph for semantic understanding.
 
-## Features
+---
 
-- 🗣️ **Natural language input** - "add a valley in the center", "make the mountain taller"
-- 🧠 **LLM-powered parsing** - Uses Cerebras Llama for intelligent command understanding
-- 🏔️ **19+ terrain primitives** - Mountains, hills, valleys, dunes, mesas, plateaus, cliffs, canyons, ridges, volcanoes, craters, and more
-- 🎨 **Smart splatmaps** - Auto-generated RGBA terrain blending (grass, rock, sand, snow) based on height and slope
-- 🌐 **Real-time 3D viewer** - React Three Fiber with custom displacement shaders and voxel raytracing
-- 🎮 **Unity export** - 16-bit heightmaps + splatmaps ready for Unity TerrainData import
-- 🧊 **Voxel generation** - Generate 3D voxel meshes (128³ to 2048³ resolution) for block-based games
-- 🗺️ **Template system** - 16+ curated terrain templates with natural language or JSON actions
-- 🚶 **Walkability zones** - Proactive path design with flat zones, paths, and clearings
-- ⚡ **Fast iteration** - Modify terrain on the fly, deterministic rebuilds from feature state
-- 📊 **Scene graph** - USD-inspired scene representation for semantic relationships
+## 🎯 Key Features
 
-## Quick Start
+### Natural Language Processing
+- 🗣️ **Multiple Parsing Strategies** - Narrative pipeline, SemanticParser, ReAct agent, Multi-agent workflow
+- 🧠 **LLM-Powered** - Supports Cerebras, Together AI, and Google Gemini
+- 📊 **Scene Graph** - USD-inspired semantic representation for reference resolution
+- 🔍 **Spatial Queries** - "find features near the dunes", "what's in the center?"
+
+### Terrain Generation
+- 🏔️ **19+ Terrain Primitives** - Mountains, hills, valleys, dunes, mesas, plateaus, cliffs, canyons, ridges, volcanoes, craters, and more
+- 🎨 **Smart Splatmaps** - Auto-generated RGBA terrain blending (grass, rock, sand, snow) based on height and slope
+- ⚡ **Single-Pass Generation** - Efficient TerrainBuilder pattern, no double rebuilds
+- 🎮 **Unity Export** - 16-bit heightmaps + splatmaps ready for Unity TerrainData import
+- 🧊 **Voxel Generation** - Generate 3D voxel meshes (128³ to 2048³ resolution) for block-based games
+
+### Quality & Refinement
+- 📈 **Quality Evaluation** - Feature metrics, texture metrics, and aesthetic quality rubrics
+- 🔄 **Iterative Refinement** - Automatic parameter adjustments based on quality feedback
+- 🤝 **Multi-Agent Workflow** - Artist/Critic/Integrator/Judge collaboration for high-quality terrain
+- 🎭 **Narrative-Driven** - Story-based terrain generation with archetypes and aesthetic goals
+
+### Advanced Features
+- 🗺️ **Template System** - 16+ curated terrain templates with natural language or JSON actions
+- 🚶 **Walkability Zones** - Proactive path design with flat zones, paths, and clearings
+- 🌐 **Real-time 3D Viewer** - React Three Fiber with custom displacement shaders and voxel raytracing
+- 📊 **State Persistence** - Atomic state management with scene graph serialization
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
-
 - Python 3.10-3.12
 - Node.js 18+ (for frontend)
-- [uv](https://github.com/astral-sh/uv) package manager (recommended) or pip
-- Cerebras API key (for full LLM functionality)
+- **[uv](https://github.com/astral-sh/uv)** - Python package manager (required for backend)
+- **[pnpm](https://pnpm.io/)** - Node.js package manager (required for frontend)
+- At least one LLM API key (Cerebras, Together, or Google Gemini)
 
 ### Setup
 
-1. **Configure Cerebras API Key** (Required for full features):
+1. **Configure API Key** (Required for full features):
    ```bash
    # Create .env file in server/ directory
    cd server
    echo CEREBRAS_API_KEY=your_api_key_here > .env
    ```
    
-   **Note:** Without the API key, the system will use regex-based parsing (limited features). The frontend will display a warning if the key is missing.
+   See **[ENV_TEMPLATE.md](ENV_TEMPLATE.md)** for all available environment variable options.
 
-2. **Install Backend Dependencies**:
+2. **Install Backend Dependencies** (using `uv`):
    ```bash
-   # Using uv (recommended)
    cd server
    uv sync
+   ```
    
-   # OR using pip
-   cd server
-   python -m venv .venv
-   .\.venv\Scripts\Activate.ps1  # Windows
-   # source .venv/bin/activate  # macOS/Linux
-   pip install -r requirements.txt
+   **Note:** This project uses `uv` for Python dependency management. If you don't have `uv` installed:
+   ```bash
+   # Install uv (Windows PowerShell)
+   powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+   
+   # Or see: https://github.com/astral-sh/uv#installation
    ```
 
-3. **Install Frontend Dependencies**:
+3. **Install Frontend Dependencies** (using `pnpm`):
    ```bash
    cd web
-   npm install
-   # OR
    pnpm install
+   ```
+   
+   **Note:** This project uses `pnpm` for Node.js dependency management. If you don't have `pnpm` installed:
+   ```bash
+   # Install pnpm
+   npm install -g pnpm
+   
+   # Or see: https://pnpm.io/installation
    ```
 
 4. **Start the System**:
@@ -71,16 +94,17 @@ A real-time web-based terrain generation system with natural language input. Gen
    - Frontend: http://localhost:5173
    - Backend API: http://localhost:8001
 
-See **[SETUP.md](SETUP.md)** for detailed instructions and troubleshooting.
+**For detailed setup instructions and troubleshooting, see [SETUP.md](SETUP.md).**
 
-## Example Commands
+---
+
+## 💡 Example Commands
 
 ### Basic Terrain Generation
 ```
 create a desert with rolling dunes and two mountains on the left
 add a valley in the center
 add three hills on the right
-create a mountain pass between the mountains
 ```
 
 ### Modifying Existing Features
@@ -92,41 +116,136 @@ remove the first hill
 
 ### Complex Compositions
 ```
-create a desert biome
-add a large mountain in the top-left
-add a large mountain in the top-right
-add a mountain pass between the two mountains
-add a deep valley in the center
-add three hills scattered in the bottom half
+create a dramatic mountain landscape
+design a balanced desert with scattered dunes
+build a volcanic field with multiple craters
 ```
 
-### Walkability Zones
+**For comprehensive examples and usage patterns, see [docs/EXAMPLES.md](docs/EXAMPLES.md).**
+
+---
+
+## 📚 Documentation
+
+Complete documentation is available in the **[docs/](docs/)** directory. Start with the **[Documentation Index](docs/README.md)** for an overview.
+
+### Core System Documentation
+
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Complete system architecture
+  - Layer-by-layer breakdown
+  - Data flow diagrams
+  - Component interactions
+  - Design principles
+
+- **[docs/PARSING_STRATEGIES.md](docs/PARSING_STRATEGIES.md)** - Parsing strategies explained
+  - Narrative Pipeline (default)
+  - SemanticParser (LLM + scene graph)
+  - ReAct Agent (tool-calling reasoning)
+  - Multi-Agent Workflow (artist/critic)
+  - Regex Fallback (basic parsing)
+
+- **[docs/QUALITY_EVALUATION.md](docs/QUALITY_EVALUATION.md)** - Quality evaluation system
+  - Feature metrics (spacing, distribution, hierarchy)
+  - Texture metrics (coverage, blending, gaps)
+  - Quality rubric and scoring
+  - Automatic refinement system
+
+- **[docs/SCENE_GRAPH.md](docs/SCENE_GRAPH.md)** - Scene graph system
+  - Entity management and labels
+  - Reference resolution ("the dunes" → feature IDs)
+  - Spatial queries
+  - Serialization and persistence
+
+### Usage Documentation
+
+- **[docs/API_REFERENCE.md](docs/API_REFERENCE.md)** - Complete API documentation
+  - All endpoints with request/response examples
+  - Core terrain generation endpoints
+  - Template system endpoints
+  - Multi-agent workflow endpoints
+  - MCP (Model Context Protocol) endpoints
+
+- **[docs/EXAMPLES.md](docs/EXAMPLES.md)** - Usage examples and patterns
+  - Basic terrain generation examples
+  - Advanced composition examples
+  - API usage examples
+  - Command patterns and best practices
+
+### Development Documentation
+
+- **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** - Development guide
+  - Project structure explained
+  - Adding new features (primitives, endpoints, parsing strategies)
+  - Testing guidelines
+  - Code style and best practices
+  - Contributing guidelines
+
+### Setup & Configuration
+
+- **[SETUP.md](SETUP.md)** - Detailed setup and installation guide
+  - Step-by-step installation
+  - Troubleshooting common issues
+  - Platform-specific instructions
+
+- **[ENV_TEMPLATE.md](ENV_TEMPLATE.md)** - Environment variables reference
+  - Required API keys
+  - Optional configuration
+  - Getting API keys from providers
+
+### Additional Resources
+
+- **[server/docs/](server/docs/)** - Technical documentation
+  - System explanation
+  - Template system guide
+  - Walkability architecture
+  - Architecture principles
+
+---
+
+## 🏗️ System Architecture
+
+Semantic Terrain uses a **layered architecture** with multiple parsing strategies, quality evaluation, and a scene graph for semantic understanding.
+
 ```
-add a path from the center to the top-right
-add a flat clearing near the center
-add mountains on the left and right of the path
+Frontend (React + Three.js)
+    ↓ REST API
+API Layer (FastAPI)
+    ↓
+Orchestration Layer (Multiple Parsing Strategies)
+    ↓
+Semantic Layer (Narrative, Quality, Scene Graph)
+    ↓
+Engine Layer (TerrainBuilder, Feature Registry)
+    ↓
+Primitives Layer (19+ Terrain Features)
+    ↓
+Output Layer (Heightmaps, Splatmaps, Voxels)
 ```
 
-## Terrain Templates
+**For complete architecture details, including data flow diagrams and component interactions, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).**
 
-The system includes 16+ curated templates showcasing different terrain types:
+---
 
-- **Mountain Landscapes**: Mountain ranges, alpine terrain
-- **Desert Landscapes**: Dunes, canyons, mesas
-- **Valley Systems**: River valleys, mountain basins
-- **Volcanic Landscapes**: Volcanic fields with craters
-- **Walkability Systems**: Paths, trading routes, mountain passes
-- **Mixed Terrain**: Diverse landscapes showcasing all features
+## 🧠 Parsing Strategies
 
-Templates can be applied via the API or frontend, and support both natural language commands and pre-composed JSON actions for deterministic generation.
+The system automatically selects the best parsing strategy based on command complexity:
 
-## API Endpoints
+1. **Narrative Pipeline** (Default) - Story-driven generation with aesthetic goals
+2. **SemanticParser** - LLM-powered parsing with scene graph context
+3. **ReAct Agent** - Tool-calling reasoning agent for complex commands
+4. **Multi-Agent Workflow** - Artist/Critic/Integrator/Judge collaboration
+5. **Regex Fallback** - Basic parsing without LLM (no API key required)
+
+**For detailed information on each strategy, when to use them, and how they work, see [docs/PARSING_STRATEGIES.md](docs/PARSING_STRATEGIES.md).**
+
+---
+
+## 📡 API Endpoints
 
 ### Core Endpoints
-- `GET /api/status` - Server status and API key configuration
-- `GET /api/state` - Get current terrain state
 - `POST /api/generate` - Generate terrain from command
 - `POST /api/modify` - Modify existing terrain
+- `GET /api/state` - Get current terrain state
 - `POST /api/reset` - Reset to flat terrain
 - `POST /api/regenerate` - Rebuild from current state
 
@@ -135,210 +254,85 @@ Templates can be applied via the API or frontend, and support both natural langu
 - `GET /api/templates/{id}` - Get template details
 - `POST /api/templates/{id}/apply` - Apply template
 
-### Assets
-- `GET /assets/*` - Serve generated heightmaps, splatmaps, voxel meshes
+### Multi-Agent Endpoints
+- `POST /api/design/multi-agent` - Run multi-agent terrain design workflow
 
-## Documentation
+### MCP Endpoints
+- `GET /api/mcp` - MCP server information
+- `GET /api/mcp/tools` - List available tools
+- `POST /api/mcp/tools/{name}/call` - Execute tool
 
-- **[SETUP.md](SETUP.md)** - Installation and getting started
-- **[server/docs/](server/docs/)** - Complete technical documentation
-  - **[SYSTEM_EXPLANATION.md](server/docs/active/SYSTEM_EXPLANATION.md)** - How the system works
-  - **[TEMPLATE_SYSTEM.md](server/docs/active/TEMPLATE_SYSTEM.md)** - Template system guide
-  - **[WALKABILITY_ZONE_ARCHITECTURE.md](server/docs/active/WALKABILITY_ZONE_ARCHITECTURE.md)** - Walkability features
-  - **[ARCHITECTURE_PRINCIPLES.md](server/docs/active/ARCHITECTURE_PRINCIPLES.md)** - Design principles
+**For complete API documentation with request/response examples, see [docs/API_REFERENCE.md](docs/API_REFERENCE.md).**
 
-## Architecture
+---
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  Frontend (React + Three.js)                             │
-│  - Natural language input                                │
-│  - Real-time 3D visualization (heightmap & voxel)        │
-│  - Template selector                                      │
-│  - API key status monitoring                             │
-└────────────┬────────────────────────────────────────────┘
-             │ REST API (FastAPI)
-             ▼
-┌─────────────────────────────────────────────────────────┐
-│  Backend (FastAPI + Python)                              │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │ Semantic Layer                                   │   │
-│  │ - LLM parser (Cerebras Llama)                    │   │
-│  │ - Regex parser (fallback)                        │   │
-│  │ - Scene graph (USD-inspired)                     │   │
-│  │ - Spatial resolver                                │   │
-│  └─────────────────────────────────────────────────┘   │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │ Engine Layer                                      │   │
-│  │ - TerrainBuilder (single-pass generation)       │   │
-│  │ - Feature registry (19+ primitives)             │   │
-│  │ - Command pattern (Add/Remove/Modify)             │   │
-│  │ - Walkability constraints                       │   │
-│  │ - Template system                                │   │
-│  └─────────────────────────────────────────────────┘   │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │ Primitives Layer                                  │   │
-│  │ - Mountains, hills, valleys, dunes              │   │
-│  │ - Mesas, plateaus, cliffs, canyons               │   │
-│  │ - Ridges, spurs, passes, volcanoes               │   │
-│  │ - Walkability zones (paths, clearings)           │   │
-│  └─────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
-             │
-             ▼
-┌─────────────────────────────────────────────────────────┐
-│  Outputs                                                 │
-│  - 16-bit heightmaps (Unity TerrainData)                │
-│  - 8-bit heightmaps (Web viewer)                        │
-│  - RGBA splatmaps (texture blending)                    │
-│  - Voxel meshes (.obj, .bin)                            │
-└─────────────────────────────────────────────────────────┘
+## 🏔️ Terrain Primitives
+
+The system supports 19+ terrain features:
+
+**Elevation:** Mountains, Hills, Mesas, Plateaus, Mounds, Pinnacles  
+**Depression:** Valleys, Canyons, Basins, Craters, Ravines  
+**Linear:** Ridges, Spurs, Passes, Slopes, Terraces  
+**Special:** Dunes, Cliffs, Volcanoes  
+**Walkability:** Flat zones, Paths, Clearings
+
+Each feature supports modifiers (taller, deeper, wider) and spatial relationships. For examples of using each feature type, see [docs/EXAMPLES.md](docs/EXAMPLES.md).
+
+---
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+Create a `.env` file in the `server/` directory. See **[ENV_TEMPLATE.md](ENV_TEMPLATE.md)** for complete configuration options.
+
+**Required (at least one LLM API key):**
+```bash
+CEREBRAS_API_KEY=your_api_key_here
+# OR
+TOGETHER_API_KEY=your_api_key_here
+# OR
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-## Tech Stack
+**Optional Configuration:**
+```bash
+LLM_PROVIDER=cerebras          # cerebras, together, google
+LLM_MODEL=llama3.1-8b          # Model name
+PORT=8001                      # Server port
+DEBUG=false                    # Debug mode
+LOG_LEVEL=INFO                 # Logging level
+TERRAIN_RESOLUTION=512         # Terrain size
+DEFAULT_SEED=42                # Random seed
+```
+
+**Getting API Keys:**
+- **Cerebras:** https://console.cerebras.ai/
+- **Together AI:** https://api.together.xyz/
+- **Google Gemini:** https://makersuite.google.com/app/apikey
+
+**For all available environment variables and their descriptions, see [ENV_TEMPLATE.md](ENV_TEMPLATE.md).**
+
+---
+
+## 🛠️ Tech Stack
 
 ### Backend
 - **Framework:** FastAPI (Python)
 - **Computation:** NumPy, SciPy
-- **Noise:** Perlin noise (fBm with multiple octaves)
-- **AI:** Cerebras Cloud SDK (Llama 3.1 8B)
-- **Package Manager:** uv (recommended) or pip
+- **AI:** Cerebras Cloud SDK, Together AI, Google Gemini
+- **Package Manager:** [uv](https://github.com/astral-sh/uv) (required)
 
 ### Frontend
 - **Framework:** React 18 + TypeScript
 - **Build Tool:** Vite
+- **Package Manager:** [pnpm](https://pnpm.io/) (required)
 - **3D Engine:** React Three Fiber + Three.js
-- **Shaders:** Custom GLSL for:
-  - Vertex displacement (heightmap)
-  - Splatmap blending (RGBA textures)
-  - Voxel raytracing (3D voxel visualization)
+- **Shaders:** Custom GLSL for displacement, blending, raytracing
 
-### Key Libraries
-- **Backend:** `cerebras-cloud-sdk`, `python-dotenv`, `Pillow`
-- **Frontend:** `@react-three/fiber`, `@react-three/drei`, `axios`
+---
 
-## Terrain Primitives
-
-The system supports 19+ terrain features:
-
-**Elevation Features:**
-- Mountains, Hills, Mesas, Plateaus, Mounds, Pinnacles
-
-**Depression Features:**
-- Valleys, Canyons, Basins, Craters, Ravines
-
-**Linear Features:**
-- Ridges, Spurs, Passes, Slopes, Terraces
-
-**Special Features:**
-- Dunes, Cliffs, Volcanoes
-
-**Walkability Zones:**
-- Flat zones, Paths, Clearings
-
-Each feature supports modifiers (taller, deeper, wider) and spatial relationships (relative positioning, semantic references).
-
-## Configuration
-
-### Environment Variables
-
-Create a `.env` file in the `server/` directory:
-
-```bash
-# Required for full LLM functionality
-CEREBRAS_API_KEY=your_api_key_here
-```
-
-**Getting a Cerebras API Key:**
-1. Sign up at [Cerebras Cloud](https://www.cerebras.net/cloud)
-2. Get your API key from the dashboard
-3. Add it to `server/.env`
-
-**Note:** Without the API key, the system falls back to regex-based parsing which has limited capabilities. The frontend will display a warning if the key is missing.
-
-### Server Configuration
-
-The server runs on `http://localhost:8001` by default. You can change the port in:
-- `start-backend-uv.ps1` (Windows)
-- Manual command: `uvicorn server.main:app --host 0.0.0.0 --port 8001`
-
-### Frontend Configuration
-
-The frontend runs on `http://localhost:5173` by default (Vite dev server).
-
-## Development
-
-### Project Structure
-
-```
-SemanticTerrain/
-├── server/                 # Backend (FastAPI)
-│   ├── engine/            # Core generation engine
-│   ├── primitives/         # Terrain feature generators
-│   ├── semantic/          # LLM parsing & scene graph
-│   ├── main.py            # FastAPI app
-│   ├── terrain.py         # Main orchestrator
-│   └── .env              # API keys (create this)
-├── web/                   # Frontend (React)
-│   ├── src/
-│   │   ├── components/    # React components
-│   │   ├── shaders/       # GLSL shaders
-│   │   └── api.ts        # API client
-│   └── public/           # Static assets
-└── README.md             # This file
-```
-
-### Adding New Features
-
-1. **New Terrain Primitive:**
-   - Create generator in `server/primitives/`
-   - Register in `server/engine/feature_registry.py`
-   - Add to semantic parser tool registry
-
-2. **New API Endpoint:**
-   - Add route in `server/main.py`
-   - Update `web/src/api.ts` for frontend
-
-3. **New Template:**
-   - Add to `server/engine/templates.py`
-   - Use natural language commands or JSON actions
-
-## Troubleshooting
-
-### Backend Issues
-
-**"CEREBRAS_API_KEY not found"**
-- Create `server/.env` file with your API key
-- Restart the server
-
-**"ImportError: attempted relative import"**
-- Always run from repo root (not from `server/`)
-- Use the launcher scripts (`start-backend-uv.ps1`)
-
-**Port already in use**
-- Change port in launcher script or command
-- Default: 8001
-
-### Frontend Issues
-
-**CORS errors**
-- Backend allows all origins by default
-- Check that backend is running on port 8001
-
-**Terrain not loading**
-- Check browser console for errors
-- Verify backend is running and accessible
-- Check API key status in the warning banner
-
-### API Key Issues
-
-**Frontend shows warning banner:**
-- The `CEREBRAS_API_KEY` environment variable is not set
-- Create `server/.env` with your key
-- Restart the backend server
-- The system will use limited regex parsing until configured
-
-## Contributing
+## 🤝 Contributing
 
 Contributions welcome! Areas for improvement:
 - Additional terrain primitives
@@ -347,6 +341,31 @@ Contributions welcome! Areas for improvement:
 - Performance optimizations
 - Documentation improvements
 
-## License
+**For development guidelines, project structure, and contribution process, see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).**
+
+---
+
+## 📄 License
 
 MIT - Use this as a foundation for your projects!
+
+---
+
+## 🙏 Acknowledgments
+
+- Built with [FastAPI](https://fastapi.tiangolo.com/), [React](https://react.dev/), and [Three.js](https://threejs.org/)
+- LLM support via [Cerebras](https://www.cerebras.net/), [Together AI](https://www.together.ai/), and [Google Gemini](https://deepmind.google/technologies/gemini/)
+- Inspired by USD scene graphs and procedural generation techniques
+
+---
+
+## 📖 Documentation Quick Links
+
+- **[Documentation Index](docs/README.md)** - Start here for an overview
+- **[Architecture](docs/ARCHITECTURE.md)** - System design and data flow
+- **[Parsing Strategies](docs/PARSING_STRATEGIES.md)** - How commands are parsed
+- **[Quality Evaluation](docs/QUALITY_EVALUATION.md)** - Quality assessment system
+- **[Scene Graph](docs/SCENE_GRAPH.md)** - Semantic understanding system
+- **[API Reference](docs/API_REFERENCE.md)** - Complete API documentation
+- **[Examples](docs/EXAMPLES.md)** - Usage examples and patterns
+- **[Development Guide](docs/DEVELOPMENT.md)** - Contributing and development
