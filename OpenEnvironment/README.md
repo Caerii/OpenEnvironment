@@ -2,7 +2,9 @@
 
 OpenEnvironment is an **RL-for-games environment construction toolkit**: generate and mutate game-ready world state and assets via an API so you can run training loops against consistent, replayable environments.
 
-Today, the concrete environment module in this repo is **procedural terrain/world layout generation** (heightmaps, splatmaps, optional voxel meshes). The intent is to evolve this into a broader environment builder (maps, constraints, scenarios, and evaluation signals) suitable for reinforcement learning workflows.
+The bigger idea is in [docs/vision/RL_FOR_GAMES.md](docs/vision/RL_FOR_GAMES.md).
+
+Today, the concrete environment module in this repo is **procedural terrain/world layout generation** (heightmaps, splatmaps, optional voxel meshes).
 
 ## Quick start
 
@@ -34,6 +36,7 @@ Full reference: [docs/usage/api.md](docs/usage/api.md)
 
 ## Docs
 
+- [Vision (RL for games)](docs/vision/RL_FOR_GAMES.md)
 - [Architecture](docs/architecture/overview.md)
 - [Parsing strategies](docs/architecture/parsing.md)
 - [Scene graph](docs/architecture/scene-graph.md)

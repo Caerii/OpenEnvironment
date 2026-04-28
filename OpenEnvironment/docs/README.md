@@ -4,6 +4,9 @@
 - [SETUP.md](../SETUP.md) -- installation
 - [ENV_TEMPLATE.md](../ENV_TEMPLATE.md) -- environment variables
 
+## Vision
+- [RL for games](vision/RL_FOR_GAMES.md) -- what OpenEnvironment is trying to become
+
 ## Architecture
 - [overview](architecture/overview.md) -- system layers, data flow, key files, state model
 - [parsing](architecture/parsing.md) -- how commands become terrain actions
