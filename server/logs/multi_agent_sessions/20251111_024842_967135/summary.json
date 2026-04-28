@@ -1,4 +1,0 @@
-{
-  "command": "create a sweeping dune sea with wind-carved ridges and a rocky oasis",
-  "summary": "\n\nThe given plan effectively creates a dune sea with sweeping curves and wind-carved ridges, as well as a rocky oasis for visual interest and contrast. However, there are opportunities to enhance the realism and impact of the terrain. Increasing the wave transform frequency will create more dramatic curves in the dune sea, while raising the rock form count will make the oasis more prominent. Adding an erosion transform to the dunes will further improve realism. These adjustments should be prioritized in the next iteration. The plan does not fundamentally fail the brief, so the `blocking` flag is set to false. The key aesthetic and traversal objectives for the next round should focus on erosion patterns and realistic wind-carved ridges."
-}

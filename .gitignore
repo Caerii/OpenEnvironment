@@ -2,19 +2,19 @@
 node_modules
 *.png
 
-server/.env
+OpenEnvironment/server/.env
 .env
 .env.local
 .env.*.local
 # Python
-server/.venv/
-server/__pycache__/
-server/*.pyc
-server/*.pyo
-server/*.pyd
-server/.Python
-server/pip-log.txt
-server/.pytest_cache/
+OpenEnvironment/server/.venv/
+OpenEnvironment/server/__pycache__/
+OpenEnvironment/server/*.pyc
+OpenEnvironment/server/*.pyo
+OpenEnvironment/server/*.pyd
+OpenEnvironment/server/.Python
+OpenEnvironment/server/pip-log.txt
+OpenEnvironment/server/.pytest_cache/
 **/__pycache__/
 **/*.pyc
 
@@ -23,13 +23,13 @@ server/.pytest_cache/
 # DO commit uv.lock!
 
 # Node
-web/node_modules/
-web/dist/
-web/.vite/
+OpenEnvironment/web/node_modules/
+OpenEnvironment/web/dist/
+OpenEnvironment/web/.vite/
 
 # Generated assets
-web/public/assets/*.png
-web/public/assets/terrain_state.json
+OpenEnvironment/web/public/assets/*.png
+OpenEnvironment/web/public/assets/terrain_state.json
 
 # OS
 .DS_Store
@@ -48,8 +48,12 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+logs/
+OpenEnvironment/server/logs/
 
 *.obj
 *.bin
-server/.env
-.env
+
+# Generated voxel assets
+OpenEnvironment/web/public/assets/*.obj
+OpenEnvironment/web/public/assets/*.bin

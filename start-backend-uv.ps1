@@ -1,5 +1,5 @@
 # PowerShell script to start the backend with uv
-Write-Host "Starting Semantic Terrain Backend (uv mode)..." -ForegroundColor Green
+Write-Host "Starting OpenEnvironment Backend (uv mode)..." -ForegroundColor Green
 
 # Check if uv is installed
 try {
@@ -11,7 +11,7 @@ try {
     exit 1
 }
 
-Set-Location server
+Set-Location "OpenEnvironment\server"
 
 # Check if uv.lock exists
 if (-not (Test-Path "uv.lock")) {
@@ -19,10 +19,10 @@ if (-not (Test-Path "uv.lock")) {
     uv sync
 }
 
-# Start server (run from repo root so Python can find the 'server' module)
+# Start server (set PYTHONPATH to the wrapper folder so Python can find the 'server' module)
 Set-Location ..
-$env:PYTHONPATH = (Get-Location).Path
+$env:PYTHONPATH = Join-Path (Get-Location).Path "OpenEnvironment"
 Write-Host "Starting FastAPI server on http://localhost:8001" -ForegroundColor Green
 Write-Host "Press Ctrl+C to stop" -ForegroundColor Yellow
 Write-Host ""
-uv run --directory server uvicorn server.main:app --host 0.0.0.0 --port 8001 --reload
+uv run --directory "OpenEnvironment/server" uvicorn server.main:app --host 0.0.0.0 --port 8001 --reload
